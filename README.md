@@ -1,4 +1,4 @@
-# niti-cn332
+# Smart Niti Web Application [CN332]
 ### Members:
 1. Thanawan Phongphaew 6610685171
 2. Netchanok Yindee 6610685221
