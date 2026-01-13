@@ -63,6 +63,8 @@
   ระบบประกาศข่าวสารที่สามารถเลือกกลุ่มเป้าหมายได้  
   (เช่น ประกาศเฉพาะลูกบ้านอาคาร A)
 
+---
+
 
 ## Members
 
@@ -71,3 +73,7 @@
 3. Punnawat Namkum (6610685247)  
 4. Siranat Phimphicharn (6610685353)  
 5. Ultimata Sangrungruang (6610685387)
+
+---
+
+Iteration 1: [Smart Niti Iteration 1](https://www.canva.com/design/DAG9j5cVbZM/s2VGLTmDyO-tVZuwIA3GKQ/view?utm_content=DAG9j5cVbZM&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h6855267cc5)
