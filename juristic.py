@@ -1,5 +1,5 @@
 def divider():
-    print("=" * 50)
+    print("=" * 51)
 
 
 # ---------- LOGIN ----------
