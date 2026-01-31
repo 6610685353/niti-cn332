@@ -1,5 +1,5 @@
 def divider():
-    print("-" * 40)
+    print("-" * 41)
 
 
 # ---------- LOGIN ----------
