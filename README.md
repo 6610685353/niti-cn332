@@ -65,6 +65,12 @@
 
 ---
 
+## Figma Design
+
+- [Juristics (นิติบุคคล) – GUI Design](https://www.figma.com/proto/gkOWhsQL69FxR5yKzM1Lew/Smart-Niti?node-id=216-38&t=VBFV1Pgk1Pzm8ASV-1&starting-point-node-id=216%3A38)
+- [Resident (ลูกบ้าน) – GUI Design](https://www.figma.com/proto/gkOWhsQL69FxR5yKzM1Lew/Smart-Niti?node-id=18-273&t=VBFV1Pgk1Pzm8ASV-1&starting-point-node-id=18%3A273)
+- [Technician (ช่าง) – GUI Design](https://www.figma.com/proto/gkOWhsQL69FxR5yKzM1Lew/Smart-Niti?node-id=215-1131&t=VBFV1Pgk1Pzm8ASV-1&starting-point-node-id=215%3A1131)
+
 
 ## Members
 
