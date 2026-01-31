@@ -210,7 +210,7 @@ def booking_create():
 
 # ---------- HISTORY ----------
 def divider():
-    print("-" * 40)
+    print("-" * 41)
 
 
 def history_menu():
