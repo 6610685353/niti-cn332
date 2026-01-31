@@ -71,6 +71,19 @@
 - [Resident (ลูกบ้าน) – GUI Design](https://www.figma.com/proto/gkOWhsQL69FxR5yKzM1Lew/Smart-Niti?node-id=18-273&t=VBFV1Pgk1Pzm8ASV-1&starting-point-node-id=18%3A273)
 - [Technician (ช่าง) – GUI Design](https://www.figma.com/proto/gkOWhsQL69FxR5yKzM1Lew/Smart-Niti?node-id=215-1131&t=VBFV1Pgk1Pzm8ASV-1&starting-point-node-id=215%3A1131)
 
+---
+
+## Presentation
+
+Iteration 1: [Smart Niti Iteration 1 (Overview)](https://www.canva.com/design/DAG9j5cVbZM/s2VGLTmDyO-tVZuwIA3GKQ/view?utm_content=DAG9j5cVbZM&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h6855267cc5)
+
+Iteration 2: [Smart Niti Iteration 2 (OOAD)](https://www.canva.com/design/DAG-ZIxc_Ec/n5DSKT7VxDGbUFimRyXj2A/view?utm_content=DAG-ZIxc_Ec&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h8e43ac45ba)
+
+Iteration 3: [Smart Niti Iteration 3 (UML & Use Case Diagram)](https://www.canva.com/design/DAG-9YcwmlM/vXnmnIzaPboW5ytps6bGcg/edit?utm_content=DAG-9YcwmlM&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
+
+Iteration 4: [Smart Niti Iteration 4 (GUI & CLI)](https://www.canva.com/design/DAG_6U_QGbM/5OUIlhVV47TdG_l52uNbGw/view?utm_content=DAG_6U_QGbM&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h55eb72a5e0)
+
+---
 
 ## Members
 
@@ -81,12 +94,6 @@
 5. Ultimata Sangrungruang (6610685387)
 
 ---
-
-Iteration 1: [Smart Niti Iteration 1 (Overview)](https://www.canva.com/design/DAG9j5cVbZM/s2VGLTmDyO-tVZuwIA3GKQ/view?utm_content=DAG9j5cVbZM&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h6855267cc5)
-
-Iteration 2: [Smart Niti Iteration 2 (OOAD)](https://www.canva.com/design/DAG-ZIxc_Ec/n5DSKT7VxDGbUFimRyXj2A/view?utm_content=DAG-ZIxc_Ec&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h8e43ac45ba)
-
-Iteration 3: [Smart Niti Iteration 3 (UML and Use Case Diagram)](https://www.canva.com/design/DAG-9YcwmlM/vXnmnIzaPboW5ytps6bGcg/edit?utm_content=DAG-9YcwmlM&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
 
 
 ## ประวัติการนำเสนอ
