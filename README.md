@@ -76,8 +76,17 @@
 
 ---
 
-Iteration 1: [Smart Niti Iteration 1](https://www.canva.com/design/DAG9j5cVbZM/s2VGLTmDyO-tVZuwIA3GKQ/view?utm_content=DAG9j5cVbZM&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h6855267cc5)
+Iteration 1: [Smart Niti Iteration 1 (Overview)](https://www.canva.com/design/DAG9j5cVbZM/s2VGLTmDyO-tVZuwIA3GKQ/view?utm_content=DAG9j5cVbZM&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h6855267cc5)
 
-Iteration 2: [Smart Niti Iteration 2](https://www.canva.com/design/DAG-ZIxc_Ec/n5DSKT7VxDGbUFimRyXj2A/view?utm_content=DAG-ZIxc_Ec&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h8e43ac45ba)
+Iteration 2: [Smart Niti Iteration 2 (OOAD)](https://www.canva.com/design/DAG-ZIxc_Ec/n5DSKT7VxDGbUFimRyXj2A/view?utm_content=DAG-ZIxc_Ec&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h8e43ac45ba)
 
-Iteration 3: [Smart Niti Iteration 3](https://www.canva.com/design/DAG-9YcwmlM/vXnmnIzaPboW5ytps6bGcg/edit?utm_content=DAG-9YcwmlM&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
+Iteration 3: [Smart Niti Iteration 3 (UML and Use Case Diagram)](https://www.canva.com/design/DAG-9YcwmlM/vXnmnIzaPboW5ytps6bGcg/edit?utm_content=DAG-9YcwmlM&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
+
+
+## ประวัติการนำเสนอ
+
+- **12 มกราคม 2569**  
+  - Smart Niti Iteration 1 (Overview)
+  - Smart Niti Iteration 2 (OOAD)
+
+
