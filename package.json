@@ -1,0 +1,23 @@
+{
+  "name": "niti-cn332",
+  "version": "1.0.0",
+  "description": "ในปัจจุบัน การบริหารจัดการหมู่บ้านจัดสรรและคอนโดมิเนียมยังคงประสบกับปัญหาหลายประการ อันเนื่องมาจากกระบวนการทำงานที่ล่าช้าและขาดความโปร่งใส โดยปัญหาที่พบบ่อยประกอบด้วย",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/6610685353/niti-cn332.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/6610685353/niti-cn332/issues"
+  },
+  "homepage": "https://github.com/6610685353/niti-cn332#readme",
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  }
+}
