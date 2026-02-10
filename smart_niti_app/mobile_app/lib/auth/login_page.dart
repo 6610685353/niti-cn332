@@ -26,7 +26,7 @@ class _LoginPageState extends State<LoginPage> {
         const SnackBar(
           content: Text(
             'Invalid username/email or password!',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Color.fromRGBO(255, 255, 255, 1)),
           ),
           backgroundColor: Colors.redAccent,
         ),
@@ -37,6 +37,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color.fromRGBO(255, 255, 255, 1),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -66,31 +67,82 @@ class _LoginPageState extends State<LoginPage> {
                 const Center(
                   child: Text(
                     'Smart Niti',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
                   ),
                 ),
 
                 const SizedBox(height: 8),
 
-                const Text('Residential Management'),
+                const Text(
+                  'Residential Management',
+                  style: TextStyle(
+                    color: Color.fromRGBO(97, 117, 137, 1),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Secure Login',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                  ),
+                ),
+
+                const SizedBox(height: 5),
+
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Please enter your login credentials to access the portal.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color.fromRGBO(97, 117, 137, 1),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
 
                 const SizedBox(height: 32),
+
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Username/Email',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
 
                 TextField(
                   controller: usernameController,
                   decoration: const InputDecoration(
-                    labelText: 'Username',
+                    labelText: 'Enter your username or email',
                     border: OutlineInputBorder(),
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 32),
+
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Password',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
 
                 TextField(
                   controller: passwordController,
                   obscureText: true,
                   decoration: const InputDecoration(
-                    labelText: 'Password',
+                    labelText: 'Enter your password',
                     border: OutlineInputBorder(),
                   ),
                 ),
