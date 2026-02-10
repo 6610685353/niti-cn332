@@ -9,7 +9,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Smart Niti',
-      theme: ThemeData(textTheme: GoogleFonts.interTextTheme()),
+      theme: ThemeData(fontFamily: 'Inter'),
       home: LoginPage(),
       debugShowCheckedModeBanner: false,
     );
