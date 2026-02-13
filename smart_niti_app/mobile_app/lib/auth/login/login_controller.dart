@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../home/home_page.dart';
+import '../../resident/features/home/home_page.dart';
 
 class LoginController {
   final BuildContext context;
