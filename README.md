@@ -85,6 +85,8 @@ Iteration 4: [Smart Niti Iteration 4 (GUI & CLI)](https://www.canva.com/design/D
 
 Iteration 5: [Smart Niti Iteration 5 (Mapping & Facade)](https://www.canva.com/design/DAHAV7eVrww/OvPVbpCJ1JZD_p6Y8md8mA/view?utm_content=DAHAV7eVrww&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hfa68559e68)
 
+Iteration 6: [Smart Niti Iteration 6 (Facade & Adapter Pattern)](https://www.canva.com/design/DAHA7fIy_Kk/Uz59xdVQxBhtIOsbQnOuYA/view?utm_content=DAHA7fIy_Kk&utm_campaign=designshare&utm_medium=link&utm_source=viewer)
+
 ---
 
 ## Members
