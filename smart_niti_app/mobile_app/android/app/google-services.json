@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "825941701407",
+    "project_id": "smart-niti-e2de6",
+    "storage_bucket": "smart-niti-e2de6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:825941701407:android:38832c74c433d1f297f62a",
+        "android_client_info": {
+          "package_name": "com.example.mobile_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "825941701407-q4s19akccdv9qda9l0p5bldumloqcjud.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mobile_app",
+            "certificate_hash": "4d1f920d57c4acf32d30ce8cf46a315acdc8f143"
+          }
+        },
+        {
+          "client_id": "825941701407-2blehanidnkegfvfg0s72u7310o9topj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4AUtO4SF00ORMHLycvXZMUYC-8h1OTFI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "825941701407-2blehanidnkegfvfg0s72u7310o9topj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "825941701407-34vn194b1kujkl8khkco2il22a28ug60.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.mobileApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
