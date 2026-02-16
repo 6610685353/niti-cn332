@@ -6,12 +6,12 @@ class RecentUpdate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 12.0),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFF1E3A8A),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(25),
         ),
         width: double.infinity,
         height: 205,
