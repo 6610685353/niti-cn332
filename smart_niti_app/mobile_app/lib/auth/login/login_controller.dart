@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../resident/features/home/home_page.dart';
+import 'package:mobile_app/resident/core/resident_main_page.dart';
 
 class LoginController {
   final BuildContext context;
@@ -16,7 +16,7 @@ class LoginController {
     if (username == 'username' && password == 'password') {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
+        MaterialPageRoute(builder: (_) => const ResidentMainPage()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
