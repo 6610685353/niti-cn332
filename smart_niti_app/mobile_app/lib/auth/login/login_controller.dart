@@ -114,15 +114,11 @@
 // }
 // ok
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
 import 'package:mobile_app/resident/core/resident_main_page.dart';
-=======
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:mobile_app/auth_service.dart';
-import '../../resident/features/home/home_page.dart';
->>>>>>> 1357f17e0aec9cf79bcc450f1cceb17432b35eaf
 
 class LoginController {
   final AuthService _authService = AuthService();
@@ -148,20 +144,6 @@ class LoginController {
         return;
       }
 
-<<<<<<< HEAD
-    if (username == 'username' && password == 'password') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const ResidentMainPage()),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid username/email or password!'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-=======
       Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
 
       bool isResident = data['role'] == 'resident';
@@ -172,7 +154,7 @@ class LoginController {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
+          MaterialPageRoute(builder: (_) => const ResidentMainPage()),
         );
       } else {
         await _authService.logout();
@@ -189,7 +171,6 @@ class LoginController {
       if (!context.mounted) return;
 
       _showErrorDialog(context, "Error", "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล");
->>>>>>> 1357f17e0aec9cf79bcc450f1cceb17432b35eaf
     }
   }
 
