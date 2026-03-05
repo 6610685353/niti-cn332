@@ -87,6 +87,8 @@ Iteration 5: [Smart Niti Iteration 5 (Mapping & Facade)](https://www.canva.com/d
 
 Iteration 6: [Smart Niti Iteration 6 (Facade & Adapter Pattern)](https://www.canva.com/design/DAHA7fIy_Kk/Uz59xdVQxBhtIOsbQnOuYA/view?utm_content=DAHA7fIy_Kk&utm_campaign=designshare&utm_medium=link&utm_source=viewer)
 
+Iteration 7: [Smart Niti Iteration 7 (Implement Plan)](https://www.canva.com/design/DAHDFrfeymw/zgIoPW6FiC3qV7l1JkCUzA/view?utm_content=DAHDFrfeymw&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h3529507806)
+
 ---
 
 ## Members
