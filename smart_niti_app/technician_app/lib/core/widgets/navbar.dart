@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../home/screens/home.dart'; // ตรวจสอบ path ไฟล์ home ของคุณ
-import '../../profile/screens/profile.dart'; // ตรวจสอบ path ไฟล์ profile ของคุณ
+import '../../home/screens/home.dart';
+import '../../profile/screens/profile.dart';
 import '../constants/app_color.dart';
+import '../../schedule/screens/schedule.dart';
 
 class MainNavWrapper extends StatefulWidget {
   const MainNavWrapper({Key? key}) : super(key: key);
@@ -23,7 +24,7 @@ class _MainNavWrapperState extends State<MainNavWrapper> {
   Widget build(BuildContext context) {
     final List<Widget> _pages = [
       HomeScreen(onProfileTap: () => _jumpToTab(2)),
-      const Center(child: Text('Schedule')),
+      const ScheduleScreen(),
       const ProfileScreen(),
     ];
 

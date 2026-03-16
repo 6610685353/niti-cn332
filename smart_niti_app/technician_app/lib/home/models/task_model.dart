@@ -7,6 +7,7 @@ class TaskModel {
   final String time;
   final String location;
   final Color tagColor;
+  final DateTime date;
 
   TaskModel({
     required this.id,
@@ -15,10 +16,10 @@ class TaskModel {
     required this.time,
     required this.location,
     required this.tagColor,
+    required this.date,
   });
 }
 
-//Mock task Data
 final List<TaskModel> homeMockTasks = [
   TaskModel(
     id: '#8821',
@@ -27,6 +28,7 @@ final List<TaskModel> homeMockTasks = [
     time: '09:00 - 10:00 AM',
     location: 'Floor 4',
     tagColor: Colors.red,
+    date: DateTime.now(),
   ),
   TaskModel(
     id: '#8822',
@@ -35,6 +37,7 @@ final List<TaskModel> homeMockTasks = [
     time: '11:30 - 12:00 PM',
     location: 'Lobby',
     tagColor: Colors.blue,
+    date: DateTime.now(),
   ),
   TaskModel(
     id: '#8823',
@@ -43,5 +46,6 @@ final List<TaskModel> homeMockTasks = [
     time: '01:00 - 02:00 PM',
     location: 'Floor 2',
     tagColor: Colors.orange,
+    date: DateTime.now().add(const Duration(days: 1)),
   ),
 ];
