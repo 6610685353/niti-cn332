@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/login_form.dart';
 import '../../../core/widgets/navbar.dart';
+import '../../core/constants/app_color.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -17,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bgApp,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -41,13 +42,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF1F5F9),
+                                    color: AppColors.bgLight,
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: const Icon(
                                     Icons.construction_rounded,
                                     size: 42,
-                                    color: Color(0xFF1565C0),
+                                    color: AppColors.primary,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
@@ -57,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     fontSize: 24,
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: 1.5,
-                                    color: Color(0xFF0F172A),
+                                    color: AppColors.textDark,
                                   ),
                                 ),
                                 const Text(
@@ -65,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.blueGrey,
+                                    color: AppColors.textDark,
                                     letterSpacing: 1.2,
                                   ),
                                 ),
@@ -81,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF0F172A),
+                              color: AppColors.textDark,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -89,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Enter your credentials to access your workspace.',
                             style: TextStyle(
                               fontSize: 15,
-                              color: Colors.grey.shade600,
+                              color: AppColors.textLight,
                             ),
                           ),
                           const SizedBox(height: 35),
@@ -127,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      activeColor: const Color(0xFF1565C0),
+                                      activeColor: AppColors.primary,
                                       onChanged: (val) =>
                                           setState(() => _rememberMe = val!),
                                     ),
@@ -144,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: const Text(
                                   'Forgot Password?',
                                   style: TextStyle(
-                                    color: Color(0xFF1565C0),
+                                    color: AppColors.primary,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -160,8 +161,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 56,
                             child: ElevatedButton(
                               onPressed: () {
-                                // เพิ่ม Logic การเปลี่ยนหน้าตรงนี้
-
                                 Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
@@ -172,10 +171,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1565C0),
+                                backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(15),
                                 ),
                                 elevation: 0,
                               ),
@@ -197,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           '© 2026 Smart Niti Systems v1.0',
                           style: TextStyle(
-                            color: Colors.grey.shade400,
+                            color: AppColors.textLight,
                             fontSize: 12,
                           ),
                         ),

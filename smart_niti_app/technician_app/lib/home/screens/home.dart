@@ -5,14 +5,14 @@ import '../widgets/task_card.dart';
 import '../models/task_model.dart';
 
 class HomeScreen extends StatelessWidget {
-  final VoidCallback onProfileTap; // ✅ รับฟังก์ชันจากหน้าแม่
+  final VoidCallback onProfileTap;
 
   const HomeScreen({Key? key, required this.onProfileTap}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
+      backgroundColor: AppColors.bgApp,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(
@@ -34,7 +34,7 @@ class HomeScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
+                      color: AppColors.textDark,
                     ),
                   ),
                   _buildTodayChip(),
@@ -68,7 +68,7 @@ class HomeScreen extends StatelessWidget {
       children: [
         Row(
           children: [
-            // ✅ กดที่รูปโปรไฟล์แล้วเรียก onProfileTap
+            // กดรูปโปรไฟล์
             GestureDetector(
               onTap: onProfileTap,
               child: Container(
@@ -103,7 +103,7 @@ class HomeScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: AppColors.textDark,
                         letterSpacing: -0.3,
                       ),
                     ),
@@ -118,7 +118,7 @@ class HomeScreen extends StatelessWidget {
                 Text(
                   'Technician Specialist',
                   style: TextStyle(
-                    color: Color(0xFF64748B),
+                    color: AppColors.textLight,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -193,7 +193,7 @@ class HomeScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF94A3B8),
+            color: AppColors.textLight,
             letterSpacing: 1.2,
           ),
         ),
@@ -210,8 +210,7 @@ class HomeScreen extends StatelessWidget {
             SummaryCard(
               count: '03',
               label: 'Pending',
-              icon: Icons
-                  .hourglass_top_rounded, // แก้ไอคอนให้ทรายไม่เต็มตามที่ชอบ
+              icon: Icons.hourglass_top_rounded,
               baseColor: const Color(0xFFF59E0B),
             ),
             const SizedBox(width: 12),
@@ -231,21 +230,21 @@ class HomeScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: const Color(0xFFEBF5FF),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.circle, size: 6, color: Color(0xFF64748B)),
+          const Icon(Icons.circle, size: 6, color: Color(0xFF3B82F6)),
           const SizedBox(width: 6),
           const Text(
             'Today',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF475569),
+              color: Color(0xFF1D4ED8),
             ),
           ),
         ],

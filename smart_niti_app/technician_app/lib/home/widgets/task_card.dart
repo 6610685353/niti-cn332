@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_color.dart';
 
 class TaskCard extends StatelessWidget {
   final String id;
@@ -25,12 +26,8 @@ class TaskCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24), // ความมนเท่าเดิม
-        // ✅ 1. เอา boxShadow ออก และใส่ border สีเทาอ่อนแทน
-        border: Border.all(
-          color: Colors.grey.shade200, // สีเทาอ่อนๆ นุ่มๆ
-          width: 1.0,
-        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.bgLight, width: 1.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,7 +56,7 @@ class TaskCard extends StatelessWidget {
               Text(
                 'ID: $id',
                 style: const TextStyle(
-                  color: Colors.blueGrey,
+                  color: AppColors.textLight,
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
                 ),
@@ -72,32 +69,38 @@ class TaskCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF0F172A),
+              color: AppColors.textDark,
             ),
           ),
           const SizedBox(height: 14),
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.access_time_rounded,
                 size: 16,
-                color: Colors.blueGrey.shade300,
+                color: AppColors.textLight,
               ),
               const SizedBox(width: 6),
               Text(
                 time,
-                style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 13),
+                style: const TextStyle(
+                  color: AppColors.textLight,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(width: 16),
-              Icon(
+              const Icon(
                 Icons.location_on_outlined,
                 size: 16,
-                color: Colors.blueGrey.shade300,
+                color: AppColors.textLight,
               ),
               const SizedBox(width: 6),
               Text(
                 location,
-                style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 13),
+                style: const TextStyle(
+                  color: AppColors.textLight,
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
@@ -113,38 +116,23 @@ class TaskCard extends StatelessWidget {
       width: double.infinity,
       height: 48,
       child: ElevatedButton.icon(
-        onPressed: () {
-          // ใส่ Logic
-        },
-        // ✅ 2. เปลี่ยนไอคอนและสีปุ่มให้ดู Outlined ขึ้น (ตามความชอบส่วนใหญ่ของดีไซน์นี้)
-        icon: const Icon(
-          Icons.edit_outlined,
-          size: 18,
-          color: Color(0xFF1565C0),
-        ),
+        onPressed: () {},
+        icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.white),
         label: const Text(
           'Update your progress',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1565C0),
+            color: Colors.white,
+            fontSize: 15,
           ),
         ),
-        style:
-            ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF1F7FF), // สีฟ้าอ่อนมาก
-              elevation: 0,
-              shadowColor: Colors.transparent,
-              surfaceTintColor: Colors.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                // ✅ 3. ใส่เส้นขอบให้ปุ่มด้วยเพื่อให้รับกับตัวการ์ด
-                side: const BorderSide(color: Color(0xFFD0E3FF), width: 1),
-              ),
-            ).copyWith(
-              elevation: WidgetStateProperty.resolveWith<double>(
-                (states) => 0.0,
-              ),
-            ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
       ),
     );
   }
