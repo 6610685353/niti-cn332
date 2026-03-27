@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:juristic_app/core/constants/app_colors.dart';
 import 'package:juristic_app/route.dart';
-// import 'package:firebase_core/firebase_core.dart'; temp
+import 'package:firebase_core/firebase_core.dart'; 
 import 'package:get/get.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // await Firebase.initializeApp(); temp
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
