@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:juristic_app/core/constants/app_colors.dart';
 import 'package:juristic_app/route.dart';
-import 'package:firebase_core/firebase_core.dart';
+// import 'package:firebase_core/firebase_core.dart'; temp
+import 'package:get/get.dart';
 
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  // await Firebase.initializeApp(); temp
   runApp(const MyApp());
 }
 
@@ -15,8 +16,7 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
+    return GetMaterialApp(
       theme: ThemeData(
         fontFamily: 'Inter',
         scaffoldBackgroundColor: AppColors.backgroundColor,
