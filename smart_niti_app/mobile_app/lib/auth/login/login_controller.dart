@@ -3,14 +3,12 @@ import 'package:mobile_app/resident/core/resident_main_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'package:mobile_app/auth_service.dart';
 import 'package:mobile_app/resident/resident_facade.dart';
 import 'package:mobile_app/auth/adapters/google_auth_adapter.dart';
 import 'package:mobile_app/auth/adapters/facebook_auth_adapter.dart';
 import 'package:mobile_app/auth/adapters/email_auth_adapter.dart';
 
 class LoginController {
-  final AuthService _authService = AuthService();
   final ResidentFacade _residentFacade = ResidentFacade();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -25,7 +23,7 @@ class LoginController {
       if (!context.mounted) return;
 
       if (!userDoc.exists) {
-        await _authService.logout();
+        await _residentFacade.logout();
         _showErrorDialog(
           context,
           "ไม่พบข้อมูลในระบบ",
@@ -47,7 +45,7 @@ class LoginController {
           MaterialPageRoute(builder: (_) => const ResidentMainPage()),
         );
       } else {
-        await _authService.logout();
+        await _residentFacade.logout();
         if (!context.mounted) return;
 
         _showErrorDialog(
@@ -57,7 +55,7 @@ class LoginController {
         );
       }
     } catch (e) {
-      await _authService.logout();
+      await _residentFacade.logout();
       if (!context.mounted) return;
 
       _showErrorDialog(context, "Error", "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล");
