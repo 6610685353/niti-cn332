@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>825941701407-hqmbfol97ecp98qifjeqbk8tff5b91rb.apps.googleusercontent.com</string>
+	<string>825941701407-rgqgvpdulj10hqvq9rhmj9l25fvvf8dr.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.825941701407-hqmbfol97ecp98qifjeqbk8tff5b91rb</string>
+	<string>com.googleusercontent.apps.825941701407-rgqgvpdulj10hqvq9rhmj9l25fvvf8dr</string>
 	<key>ANDROID_CLIENT_ID</key>
 	<string>825941701407-q4s19akccdv9qda9l0p5bldumloqcjud.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.juristicApp</string>
+	<string>com.example.technicianApp</string>
 	<key>PROJECT_ID</key>
 	<string>smart-niti-e2de6</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:825941701407:ios:0ef9d1da60fc4ce797f62a</string>
+	<string>1:825941701407:ios:c9cb27e677dcfac897f62a</string>
 </dict>
 </plist>
