@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color primary = Color(0xFF1565C0);
-  static const Color bgLight = Color(0xFFF8FAFC);
+  static const Color primary = Color(0xFF2B468B);
+  static const Color bgLight = Color(0xFFE2E8F0);
+  static const Color bgApp = Color(0xFFF1F5F9);
   static const Color textDark = Color(0xFF0F172A);
+  static const Color textLight = Color(0xFF64748B);
 
-  // Status Colors (สำหรับ Work Summary)
+  // Home - work summary
   static const Color assignedBg = Color(0xFFFFE4E6);
   static const Color pendingBg = Color(0xFFFEF3C7);
   static const Color resolvedBg = Color(0xFFDCFCE7);

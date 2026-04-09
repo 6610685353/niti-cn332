@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_color.dart';
 
 class CustomInputField extends StatefulWidget {
   final String label;
@@ -45,8 +46,8 @@ class _CustomInputFieldState extends State<CustomInputField> {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.bgLight),
+            borderRadius: BorderRadius.circular(15),
             color: Colors.white,
           ),
           child: Row(
@@ -60,7 +61,11 @@ class _CustomInputFieldState extends State<CustomInputField> {
                 child: Icon(widget.icon, color: Colors.blueGrey, size: 20),
               ),
               // เส้นกั้น
-              Container(width: 1, height: 24, color: Colors.grey.shade300),
+              Container(
+                width: 1,
+                height: 24,
+                color: const Color.fromARGB(255, 194, 198, 203),
+              ),
               const SizedBox(width: 12),
               // ช่องกรอก
               Expanded(
