@@ -48,13 +48,13 @@ class NextBooking extends StatelessWidget {
               const SizedBox(height: 10),
               const Text(
                 "Next Booking",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 2),
               const Text(
                 "Gym at 6:00 PM",
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   color: Color(0xFF4C739A),
                   fontWeight: FontWeight.w400,
                 ),

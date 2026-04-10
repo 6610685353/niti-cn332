@@ -42,13 +42,13 @@ class ActiveRepair extends StatelessWidget {
               const SizedBox(height: 10),
               const Text(
                 "Active Repairs",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 2),
               const Text(
                 "Leakage fixed",
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   color: Color(0xFF4C739A),
                   fontWeight: FontWeight.w400,
                 ),

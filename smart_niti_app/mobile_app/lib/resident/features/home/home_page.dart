@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_app/resident/features/home/widgets/recent_update.dart';
 import 'widgets/home_header.dart';
 import 'widgets/main_content/main_content.dart';
 
@@ -10,7 +9,6 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -22,8 +20,7 @@ class HomePage extends StatelessWidget {
               );
             },
           ),
-          RecentUpdate(),
-          MainContent(),
+          const Expanded(child: MainContent()),
         ],
       ),
     );

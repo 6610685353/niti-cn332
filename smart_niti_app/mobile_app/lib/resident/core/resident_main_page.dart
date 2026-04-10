@@ -4,6 +4,7 @@ import '../features/parcel/parcel_page.dart';
 import '../features/profile/profile_page.dart';
 import '../features/home/home_page.dart';
 import 'widgets/main_bottom_nav.dart';
+import '../features/repair_request/repair_request_page.dart';
 
 class ResidentMainPage extends StatefulWidget {
   const ResidentMainPage({super.key});
@@ -28,10 +29,17 @@ class _ResidentMainPageState extends State<ResidentMainPage> {
       body: IndexedStack(index: _currentIndex, children: _pages),
       floatingActionButton: _currentIndex == 0
           ? SizedBox(
-              width: 70,
-              height: 70,
+              width: 56,
+              height: 56,
               child: FloatingActionButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RepairRequestPage(),
+                    ),
+                  );
+                },
                 backgroundColor: const Color(0xFF0F172A),
                 shape: const CircleBorder(
                   side: BorderSide(color: Colors.white, width: 3),
@@ -40,7 +48,7 @@ class _ResidentMainPageState extends State<ResidentMainPage> {
                 child: const Icon(
                   Icons.handyman,
                   color: Colors.white,
-                  size: 28,
+                  size: 24,
                 ),
               ),
             )

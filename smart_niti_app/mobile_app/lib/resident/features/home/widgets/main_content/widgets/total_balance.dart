@@ -48,13 +48,13 @@ class TotalBalance extends StatelessWidget {
               const SizedBox(height: 10),
               const Text(
                 "Total Balance",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 5),
               const Text(
                 "\$500.00",
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 16,
                   color: Color(0xFFDC2626),
                   fontWeight: FontWeight.w800,
                 ),

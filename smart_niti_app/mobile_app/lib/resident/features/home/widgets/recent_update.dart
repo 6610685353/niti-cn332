@@ -31,7 +31,7 @@ class RecentUpdate extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                "lorem ipsum dolor sit amet, consectetur adipiscing elit. lorem ipsum dolor sit amet, consectetur adipiscing elit. lorem ipsum dolor sit amet, consectetur adipiscing elit. lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                "lorem ipsum dolor sit amet, consectetur adipiscing elit. lorem ipsum dolor sit amet, consectetur adipiscing elit. lorem ipsum dolor sit amet, consectetur adipiscing elit.",
                 style: TextStyle(
                   fontSize: 15,
                   color: Colors.white70,
