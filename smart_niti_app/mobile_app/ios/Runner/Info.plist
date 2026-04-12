@@ -53,6 +53,12 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ขออนุญาตเข้าถึงคลังภาพเพื่อเลือกรูปภาพความเสียหายสำหรับการแจ้งซ่อม</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ขออนุญาตเข้าถึงกล้องเพื่อถ่ายภาพความเสียหายสำหรับการแจ้งซ่อม</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ขออนุญาตเข้าถึงไมโครโฟน (กรณีถ่ายวิดีโอ)</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

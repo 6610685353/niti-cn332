@@ -13,7 +13,7 @@ class MainBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 90,
+      height: 100,
       decoration: BoxDecoration(
         color: Colors.white,
         border: const Border(
@@ -22,7 +22,7 @@ class MainBottomNav extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
+            blurRadius: 4,
             offset: const Offset(0, -2),
           ),
         ],

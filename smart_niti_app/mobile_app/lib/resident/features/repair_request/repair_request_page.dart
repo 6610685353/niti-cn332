@@ -5,6 +5,7 @@ import 'widgets/repair_stepper.dart';
 import './views/steps/step_1_details_view.dart';
 import './views/steps/step_2_schedule_view.dart';
 import './views/steps/step_3_confirm_view.dart';
+import './widgets/repair_bottom_button.dart';
 
 class RepairRequestPage extends StatelessWidget {
   const RepairRequestPage({super.key});
@@ -14,7 +15,7 @@ class RepairRequestPage extends StatelessWidget {
     final provider = context.watch<RepairRequestProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFF8FAFC),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, size: 20),
@@ -32,7 +33,7 @@ class RepairRequestPage extends StatelessWidget {
         ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFFF8FAFC),
         foregroundColor: Colors.black,
       ),
       body: Column(
@@ -52,29 +53,27 @@ class RepairRequestPage extends StatelessWidget {
           ),
 
           // ปุ่มด้านล่าง
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: ElevatedButton(
-              onPressed: () {
+          RepairBottomButton(
+            currentStep: provider.currentStep,
+            onPressed: () {
+              // เช็คก่อนว่า Step ปัจจุบันกรอกครบหรือยัง
+              if (provider.canMoveToNext) {
                 if (provider.currentStep < 2) {
                   provider.nextStep();
                 } else {
-                  // ถ้าอยู่หน้าสุดท้าย ให้ทำการส่งข้อมูล
                   provider.submitRequest();
                 }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E293B),
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: Text(
-                provider.currentStep == 2 ? "Confirm Your Request" : "Continue",
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
+              } else {
+                // ถ้าไม่ครบ ให้โชว์ SnackBar เตือน
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Please fill in all required fields"),
+                    backgroundColor: Colors.redAccent,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
           ),
         ],
       ),

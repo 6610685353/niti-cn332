@@ -77,4 +77,41 @@ class RepairRequestProvider extends ChangeNotifier {
     _currentStep = 0;
     notifyListeners();
   }
+
+  void addImage(File image) {
+    if (_requestData.images.length < 4) {
+      // สร้าง List ใหม่เพื่อกระตุ้น notifyListeners
+      final updatedImages = List<File>.from(_requestData.images)..add(image);
+      _requestData = _requestData.copyWith(images: updatedImages);
+      notifyListeners();
+    }
+  }
+
+  void removeImage(int index) {
+    final updatedImages = List<File>.from(_requestData.images)..removeAt(index);
+    _requestData = _requestData.copyWith(images: updatedImages);
+    notifyListeners();
+  }
+
+  // เช็ค Step 1: ต้องมี Category, Title และ Description (รูปไม่ต้อง)
+  bool get isStep1Valid {
+    return _requestData.category.isNotEmpty &&
+        _requestData.title.trim().isNotEmpty &&
+        _requestData.description.trim().isNotEmpty &&
+        _requestData.location.isNotEmpty;
+  }
+
+  // เช็ค Step 2: ต้องเลือกวันที่ และ ช่วงเวลา
+  bool get isStep2Valid {
+    return _requestData.selectedDate != null &&
+        (_requestData.selectedTimeSlot != null &&
+            _requestData.selectedTimeSlot!.isNotEmpty);
+  }
+
+  // เช็คว่า Step ปัจจุบันกรอกครบหรือยัง
+  bool get canMoveToNext {
+    if (_currentStep == 0) return isStep1Valid;
+    if (_currentStep == 1) return isStep2Valid;
+    return true; // Step 3 คือการคอนเฟิร์ม ไม่ต้องเช็คเพิ่ม
+  }
 }

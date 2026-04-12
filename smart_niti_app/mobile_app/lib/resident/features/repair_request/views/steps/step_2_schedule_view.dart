@@ -18,7 +18,7 @@ class Step2ScheduleView extends StatelessWidget {
         children: [
           const Text(
             "Select Date",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 15),
 
@@ -27,7 +27,7 @@ class Step2ScheduleView extends StatelessWidget {
             height: 90,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: 7,
+              itemCount: 14,
               itemBuilder: (context, index) {
                 DateTime date = DateTime.now().add(Duration(days: index));
                 bool isSelected = data.selectedDate?.day == date.day;
@@ -38,14 +38,27 @@ class Step2ScheduleView extends StatelessWidget {
                     data.selectedTimeSlot ?? "",
                   ),
                   child: Container(
-                    width: 65,
+                    width: 68,
                     margin: const EdgeInsets.only(right: 12),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? const Color(0xFF1E293B)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
+                      border: Border.all(
+                        color: isSelected
+                            ? const Color(0xFF1E293B)
+                            : Colors.grey.shade200,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: isSelected ? 0.1 : 0.05,
+                          ),
+                          blurRadius: isSelected ? 10 : 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -57,12 +70,11 @@ class Step2ScheduleView extends StatelessWidget {
                             fontSize: 12,
                           ),
                         ),
-                        const SizedBox(height: 5),
                         Text(
                           date.day.toString(),
                           style: TextStyle(
                             color: isSelected ? Colors.white : Colors.black,
-                            fontSize: 18,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -75,16 +87,23 @@ class Step2ScheduleView extends StatelessWidget {
           ),
 
           const SizedBox(height: 30),
-          _buildTimeSection(context, "☀️ Morning", [
-            "09:00 - 11:00",
-            "11:00 - 13:00",
-          ], provider),
-          const SizedBox(height: 20),
-          _buildTimeSection(context, "🌇 Afternoon", [
-            "13:00 - 15:00",
-            "15:00 - 17:00",
-            "17:00 - 19:00",
-          ], provider),
+          _buildTimeSection(
+            context,
+            "Morning", // ชื่ออย่างเดียว
+            Icons.wb_sunny, // ส่ง Icon เข้าไป
+            ["09:00 - 11:00", "11:00 - 13:00"],
+            provider,
+          ),
+
+          const SizedBox(height: 25), // เพิ่ม gap เล็กน้อย
+
+          _buildTimeSection(
+            context,
+            "Afternoon", // ชื่ออย่างเดียว
+            Icons.wb_twilight_rounded, // ส่ง Icon เข้าไป
+            ["13:00 - 15:00", "15:00 - 17:00", "17:00 - 19:00"],
+            provider,
+          ),
         ],
       ),
     );
@@ -93,6 +112,7 @@ class Step2ScheduleView extends StatelessWidget {
   Widget _buildTimeSection(
     BuildContext context,
     String title,
+    IconData sectionIcon, // เพิ่ม parameter รับ Icon
     List<String> slots,
     RepairRequestProvider provider,
   ) {
@@ -101,14 +121,34 @@ class Step2ScheduleView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
+        // ส่วนหัวข้อใหม่ที่มี Icon และขนาดใหญ่ขึ้น
+        Row(
+          children: [
+            Icon(
+              sectionIcon,
+              color: const Color(0xFFF59E0B),
+              size: 22,
+            ), // สีเหลืองทอง/ส้ม
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18, // ปรับขนาดตามต้องการ
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E293B), // สี Slate 800
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16), // เพิ่มช่องว่างระหว่างหัวข้อกับรายการ
+
         Wrap(
-          spacing: 10,
-          runSpacing: 10,
+          spacing: 12,
+          runSpacing: 12,
           children: slots.map((slot) {
             bool isSelected = selectedSlot == slot;
-            bool isFull = slot == "13:00 - 15:00"; // สมมติว่าห้องนี้เต็ม
+            bool isFull = slot == "13:00 - 15:00";
 
             return GestureDetector(
               onTap: isFull
@@ -118,16 +158,33 @@ class Step2ScheduleView extends StatelessWidget {
                       slot,
                     ),
               child: Container(
-                width: (MediaQuery.of(context).size.width / 2) - 30,
-                padding: const EdgeInsets.all(15),
+                width:
+                    (MediaQuery.of(context).size.width / 2) -
+                    26, // ปรับให้พอดีขึ้น
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 12,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? Colors.blue.withOpacity(0.1)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(10),
+                      ? const Color(0xFFEFF6FF)
+                      : Colors.white, // ฟ้าอ่อนมาก
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected ? Colors.blue : Colors.grey.shade200,
+                    color: isSelected
+                        ? const Color(0xFF3B82F6)
+                        : const Color(0xFFF1F5F9),
+                    width: 2,
                   ),
+                  boxShadow: isSelected
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,15 +192,18 @@ class Step2ScheduleView extends StatelessWidget {
                     Text(
                       slot,
                       style: TextStyle(
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: isFull ? Colors.grey : Colors.black,
+                        color: isFull ? Colors.grey : const Color(0xFF1E293B),
                       ),
                     ),
+                    const SizedBox(height: 4),
                     Text(
-                      isFull ? "Fully Booked" : "Available",
+                      isFull ? "• Fully Booked" : "• Available",
                       style: TextStyle(
-                        fontSize: 10,
-                        color: isFull ? Colors.red : Colors.blue,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: isFull ? Colors.red : const Color(0xFF3B82F6),
                       ),
                     ),
                   ],

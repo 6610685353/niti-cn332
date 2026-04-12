@@ -1,18 +1,15 @@
 import 'dart:io';
 
 class RepairRequestModel {
-  // Step 1: Details
   String category;
   String title;
   String description;
   String location;
   List<File> images;
 
-  // Step 2: Schedule
   DateTime? selectedDate;
   String? selectedTimeSlot;
 
-  // Step 3: Confirmation (ราคาอาจจะมาจาก Backend หรือ Fixed ไว้)
   double inspectionFee;
 
   RepairRequestModel({
@@ -26,7 +23,6 @@ class RepairRequestModel {
     this.inspectionFee = 25.0,
   });
 
-  // ใช้สำหรับอัปเดตข้อมูลบางส่วนโดยไม่ล้างข้อมูลเก่า
   RepairRequestModel copyWith({
     String? category,
     String? title,
