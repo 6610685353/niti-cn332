@@ -108,4 +108,11 @@ Iteration 7: [Smart Niti Iteration 7 (Implement Plan)](https://www.canva.com/des
   - Smart Niti Iteration 1 (Overview)
   - Smart Niti Iteration 2 (OOAD)
 
+- **30 มีนาคม 2569**
+  - Smart Niti Iteration 3 (UML & Use Case Diagram)
+  - Smart Niti Iteration 4 (GUI & CLI)
+  - Smart Niti Iteration 5 (Mapping & Facade)
+  - Smart Niti Iteration 6 (Facade & Adapter Pattern)
+  - Smart Niti Iteration 7 (Implement Plan)
+
 
