@@ -1,3 +1,5 @@
 node_modules/
 implementation_plan.md
 *.env
+*/__pycache__/
+*.pyc

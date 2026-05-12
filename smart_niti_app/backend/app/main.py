@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.endpoints import tickets
+from api.endpoints import tickets, users
+from models import ticket, user
+from database import engine, Base
 
 app = FastAPI()
 
@@ -18,7 +20,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(tickets.router, prefix="/tickets", tags=["Tickets"])
+Base.metadata.create_all(bind=engine)
+
+app.include_router(tickets.router)
+app.include_router(users.router)
 
 @app.get("/")
 def health_check():
