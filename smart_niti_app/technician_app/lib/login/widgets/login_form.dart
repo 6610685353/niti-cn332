@@ -52,7 +52,6 @@ class _CustomInputFieldState extends State<CustomInputField> {
           ),
           child: Row(
             children: [
-              // Icon ด้านหน้า
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12.0,
@@ -60,14 +59,12 @@ class _CustomInputFieldState extends State<CustomInputField> {
                 ),
                 child: Icon(widget.icon, color: Colors.blueGrey, size: 20),
               ),
-              // เส้นกั้น
               Container(
                 width: 1,
                 height: 24,
                 color: const Color.fromARGB(255, 194, 198, 203),
               ),
               const SizedBox(width: 12),
-              // ช่องกรอก
               Expanded(
                 child: TextField(
                   controller: widget.controller,
@@ -84,7 +81,6 @@ class _CustomInputFieldState extends State<CustomInputField> {
                   ),
                 ),
               ),
-              // ปุ่ม เปิด-ปิด ตา Password
               if (widget.isPassword) ...[
                 Container(width: 1, height: 24, color: Colors.grey.shade300),
                 IconButton(

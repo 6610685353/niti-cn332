@@ -12,15 +12,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Smart Niti',
-      debugShowCheckedModeBanner: false, // ปิดแถบ Debug สีแดงที่มุมจอ
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // ตั้งค่าสีหลัก (Primary Swatch) เป็นสีน้ำเงินตามปุ่ม Login
         primarySwatch: Colors.blue,
-        // ใช้ Font มาตรฐาน
         useMaterial3: true,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      // 2. กำหนดหน้าแรกที่จะให้แสดงเมื่อเปิดแอป
       home: const LoginScreen(),
     );
   }

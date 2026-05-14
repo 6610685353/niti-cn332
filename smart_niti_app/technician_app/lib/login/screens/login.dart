@@ -14,6 +14,63 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
   final TextEditingController _staffIdController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TechnicianFacade _technicianFacade = TechnicianFacade();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Future<void> _handleLogin() async {
+    final email = _staffIdController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      _showError('กรุณากรอก Staff ID และรหัสผ่าน');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      User? user = await _technicianFacade.login(
+        EmailAuthAdapter(email: email, password: password),
+      );
+
+      if (user != null) {
+        DocumentSnapshot userDoc = await _firestore
+            .collection('users')
+            .doc(user.email)
+            .get();
+
+        if (!userDoc.exists) {
+          await _technicianFacade.logout();
+          _showError('ไม่พบข้อมูลผู้ใช้ในระบบ');
+          return;
+        }
+
+        Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
+        if (data['role'] == 'technician') {
+          if (!mounted) return;
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const MainNavWrapper()),
+            (route) => false,
+          );
+        } else {
+          await _technicianFacade.logout();
+          _showError('คุณไม่มีสิทธิ์เข้าถึงระบบช่างซ่อม');
+        }
+      }
+    } catch (e) {
+      _showError('เข้าสู่ระบบไม่ได้: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,8 +154,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           // --- Input Fields ---
                           CustomInputField(
-                            label: 'Staff ID',
-                            hint: 'e.g. ST-12345',
+                            label: 'Email',
+                            hint: 'e.g. technician@example.com',
                             icon: Icons.badge_outlined,
                             controller: _staffIdController,
                           ),
@@ -178,13 +235,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 elevation: 0,
                               ),
-                              child: const Text(
-                                'Sign In',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              child: _isLoading
+                                  ? const CircularProgressIndicator(
+                                      color: Colors.white,
+                                    )
+                                  : const Text(
+                                      'Sign In',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                             ),
                           ),
                         ],
