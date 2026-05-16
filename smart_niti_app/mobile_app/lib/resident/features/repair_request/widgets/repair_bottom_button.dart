@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 
 class RepairBottomButton extends StatelessWidget {
   final VoidCallback onPressed;
-  final int currentStep; // เปลี่ยนมารับเป็นเลข Step (0, 1, 2)
+  final int currentStep;
+  final bool isLoading; // รับสถานะ Loading เข้ามาด้วย
 
   const RepairBottomButton({
     super.key,
     required this.onPressed,
     required this.currentStep,
+    this.isLoading = false,
   });
 
-  // ฟังก์ชันช่วยเลือกข้อความตาม Step
   String _getButtonText() {
     switch (currentStep) {
       case 0:
@@ -44,31 +45,43 @@ class RepairBottomButton extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 15, 24, 28),
         child: ElevatedButton(
-          onPressed: onPressed,
+          // ถ้า isLoading ให้ปุ่มกดไม่ได้
+          onPressed: isLoading ? null : onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF1E293B),
             foregroundColor: Colors.white,
+            disabledBackgroundColor: const Color(0xFF94A3B8),
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             minimumSize: const Size(double.infinity, 50),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                _getButtonText(), // เรียกใช้ฟังก์ชันที่สร้างไว้
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
+          child: isLoading
+              // แสดง Loading Spinner เมื่อกำลัง Submit
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _getButtonText(),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, size: 20),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, size: 20),
-            ],
-          ),
         ),
       ),
     );
