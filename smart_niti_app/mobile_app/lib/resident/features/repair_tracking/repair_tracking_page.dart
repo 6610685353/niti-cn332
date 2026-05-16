@@ -23,6 +23,13 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
   int _currentImagePage = 0;
   final PageController _pageController = PageController();
 
+  // ── Rating state ─────────────────────────────────────────────────────────
+  int? _existingRatingScore;
+  String? _existingRatingComment;
+  int? _selectedRating;
+  bool _isSubmittingRating = false;
+  final TextEditingController _commentController = TextEditingController();
+
   final double _inspectionFee = 200.0;
   final double _estimatedMaterialCost = 450.0;
   final _mockTechnician = {
@@ -41,6 +48,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
   @override
   void dispose() {
     _pageController.dispose();
+    _commentController.dispose();
     super.dispose();
   }
 
@@ -49,7 +57,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
       _isLoading = true;
       _error = null;
     });
-    await Future.wait([_fetchTicket(), _fetchImages()]);
+    await Future.wait([_fetchTicket(), _fetchImages(), _fetchRating()]);
     if (mounted) setState(() => _isLoading = false);
   }
 
@@ -87,6 +95,72 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
         }
       }
     } catch (_) {}
+  }
+
+  Future<void> _fetchRating() async {
+    try {
+      final res = await http.get(
+        Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}/rating'),
+      );
+      if (res.statusCode == 200 && mounted) {
+        final data = jsonDecode(res.body);
+        setState(() {
+          _existingRatingScore = data['score'] as int?;
+          _existingRatingComment = data['comment'] as String?;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _submitRating() async {
+    if (_selectedRating == null) return;
+    setState(() => _isSubmittingRating = true);
+    try {
+      final res = await http.post(
+        Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}/rating'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'score': _selectedRating,
+          'comment': _commentController.text.trim().isEmpty
+              ? null
+              : _commentController.text.trim(),
+        }),
+      );
+      if (!mounted) return;
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+        setState(() {
+          _existingRatingScore = data['score'] as int?;
+          _existingRatingComment = data['comment'] as String?;
+          _selectedRating = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ขอบคุณสำหรับการให้คะแนน!'),
+            backgroundColor: Color(0xFF16A34A),
+          ),
+        );
+      } else {
+        final body = jsonDecode(res.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(body['detail'] ?? 'เกิดข้อผิดพลาด'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('เชื่อมต่อ Server ไม่ได้'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmittingRating = false);
+    }
   }
 
   Future<void> _cancelTicket() async {
@@ -321,6 +395,10 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                 _buildFeesCard(),
                 const SizedBox(height: 20),
                 _buildTechnicianCard(ticket),
+                if (ticket.isDone) ...[
+                  const SizedBox(height: 20),
+                  _buildRatingSection(),
+                ],
               ],
             ),
           ),
@@ -1016,6 +1094,233 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                     ),
                   ],
                 ),
+        ],
+      ),
+    );
+  }
+
+  // ── 5. Rating Section ──────────────────────────────────────────────────────
+  Widget _buildRatingSection() {
+    final alreadyRated = _existingRatingScore != null;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.star_rounded,
+                  color: Colors.amber,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'ให้คะแนนการซ่อม',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (alreadyRated) ...[
+            // ── Already rated — read-only display ──
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Row(
+                        children: List.generate(5, (i) {
+                          return Icon(
+                            i < _existingRatingScore!
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            color: Colors.amber,
+                            size: 28,
+                          );
+                        }),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '${_existingRatingScore}/5',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF92400E),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_existingRatingComment != null &&
+                      _existingRatingComment!.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      '"${_existingRatingComment!}"',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF78350F),
+                        fontStyle: FontStyle.italic,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  const Text(
+                    'คุณให้คะแนนแล้ว',
+                    style: TextStyle(fontSize: 11, color: Color(0xFFB45309)),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            // ── Not yet rated — interactive ──
+            const Text(
+              'แตะดาวเพื่อให้คะแนน',
+              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (i) {
+                final starIndex = i + 1;
+                final isFilled =
+                    _selectedRating != null && starIndex <= _selectedRating!;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      // tap same star → reset to 0
+                      _selectedRating = _selectedRating == starIndex
+                          ? 0
+                          : starIndex;
+                    });
+                  },
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      isFilled
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      key: ValueKey(isFilled),
+                      color: isFilled ? Colors.amber : const Color(0xFFCBD5E1),
+                      size: 44,
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 6),
+            Center(
+              child: Text(
+                _selectedRating == null
+                    ? 'ยังไม่ได้เลือก'
+                    : _selectedRating == 0
+                    ? '0 / 5 — ไม่พอใจเลย'
+                    : _selectedRating == 1
+                    ? '1 / 5 — ไม่ดี'
+                    : _selectedRating == 2
+                    ? '2 / 5 — พอใช้'
+                    : _selectedRating == 3
+                    ? '3 / 5 — ปานกลาง'
+                    : _selectedRating == 4
+                    ? '4 / 5 — ดี'
+                    : '5 / 5 — ดีมาก!',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _selectedRating == null
+                      ? const Color(0xFFCBD5E1)
+                      : _selectedRating! >= 4
+                      ? const Color(0xFF16A34A)
+                      : _selectedRating! >= 2
+                      ? const Color(0xFFF97316)
+                      : const Color(0xFFDC2626),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _commentController,
+              maxLines: 3,
+              maxLength: 200,
+              decoration: InputDecoration(
+                hintText: 'เพิ่มความคิดเห็น (ไม่บังคับ)',
+                hintStyle: const TextStyle(
+                  color: Color(0xFFCBD5E1),
+                  fontSize: 13,
+                ),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                contentPadding: const EdgeInsets.all(14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFF137FEC)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: (_selectedRating == null || _isSubmittingRating)
+                    ? null
+                    : _submitRating,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF137FEC),
+                  disabledBackgroundColor: const Color(0xFFE2E8F0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: _isSubmittingRating
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const Text(
+                        'ส่งคะแนน',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+              ),
+            ),
+          ],
         ],
       ),
     );

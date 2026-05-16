@@ -161,3 +161,57 @@ def delete_ticket_image(ticket_id: int, image_id: int, db: Session = Depends(get
 
     db.delete(image)
     db.commit()
+
+# ── Ticket Ratings ─────────────────────────────────────────────────────────────
+ 
+@router.get("/{ticket_id}/rating", response_model=schemas_ticket.RatingResponse)
+def get_ticket_rating(ticket_id: int, db: Session = Depends(get_db)):
+    """ดึงคะแนนของ Ticket"""
+    rating = db.query(models_ticket.RatingModel).filter(
+        models_ticket.RatingModel.ticket_id == ticket_id
+    ).first()
+    if not rating:
+        raise HTTPException(status_code=404, detail="ยังไม่มีการให้คะแนน")
+    return rating
+ 
+ 
+@router.post("/{ticket_id}/rating", response_model=schemas_ticket.RatingResponse)
+def submit_ticket_rating(
+    ticket_id: int,
+    rating: schemas_ticket.RatingBase,
+    db: Session = Depends(get_db),
+):
+    """ให้คะแนน Ticket (ได้เฉพาะสถานะ done และให้ได้ครั้งเดียว)"""
+    ticket = db.query(models_ticket.TicketModel).filter(
+        models_ticket.TicketModel.id == ticket_id
+    ).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+ 
+    if ticket.status != models_ticket.TicketStatus.done:
+        raise HTTPException(
+            status_code=400,
+            detail="สามารถให้คะแนนได้เฉพาะ Ticket ที่เสร็จแล้ว",
+        )
+ 
+    if not (0 <= rating.score <= 5):
+        raise HTTPException(
+            status_code=400,
+            detail="คะแนนต้องอยู่ระหว่าง 0 ถึง 5",
+        )
+ 
+    existing = db.query(models_ticket.RatingModel).filter(
+        models_ticket.RatingModel.ticket_id == ticket_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="ให้คะแนน Ticket นี้ไปแล้ว")
+ 
+    db_rating = models_ticket.RatingModel(
+        ticket_id=ticket_id,
+        score=rating.score,
+        comment=rating.comment,
+    )
+    db.add(db_rating)
+    db.commit()
+    db.refresh(db_rating)
+    return db_rating
