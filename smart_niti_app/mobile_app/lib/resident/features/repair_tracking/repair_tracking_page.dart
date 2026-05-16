@@ -1,5 +1,6 @@
 // lib/resident/features/repair_tracking/repair_tracking_page.dart
 
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -15,17 +16,17 @@ class RepairTrackingPage extends StatefulWidget {
 }
 
 class _RepairTrackingPageState extends State<RepairTrackingPage> {
-  RepairTicket? _ticket;
-  List<String> _imageUrls = [];
-  bool _isLoading = true;
+  // ── Stream (real-time polling) ────────────────────────────────────────────
+  final StreamController<_TrackingSnapshot> _streamController =
+      StreamController.broadcast();
+  Timer? _pollTimer;
+
+  // ── Local UI state (ไม่ขึ้นกับ server) ────────────────────────────────────
   bool _isCancelling = false;
-  String? _error;
   int _currentImagePage = 0;
   final PageController _pageController = PageController();
 
-  // ── Rating state ─────────────────────────────────────────────────────────
-  int? _existingRatingScore;
-  String? _existingRatingComment;
+  // ── Rating input state ────────────────────────────────────────────────────
   int? _selectedRating;
   bool _isSubmittingRating = false;
   final TextEditingController _commentController = TextEditingController();
@@ -42,73 +43,64 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
   @override
   void initState() {
     super.initState();
-    _fetchAll();
+    _fetchAndEmit(); // โหลดทันที
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 4),
+      (_) => _fetchAndEmit(),
+    );
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
+    _streamController.close();
     _pageController.dispose();
     _commentController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchAll() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    await Future.wait([_fetchTicket(), _fetchImages(), _fetchRating()]);
-    if (mounted) setState(() => _isLoading = false);
-  }
-
-  Future<void> _fetchTicket() async {
+  Future<void> _fetchAndEmit() async {
+    if (_streamController.isClosed) return;
     try {
-      final res = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}'),
-      );
-      if (res.statusCode == 200) {
-        if (mounted)
-          setState(() => _ticket = RepairTicket.fromJson(jsonDecode(res.body)));
-      } else {
-        if (mounted)
-          setState(() => _error = 'โหลดข้อมูลไม่สำเร็จ (${res.statusCode})');
-      }
-    } catch (_) {
-      if (mounted) setState(() => _error = 'เชื่อมต่อ Server ไม่ได้');
-    }
-  }
+      final results = await Future.wait([
+        http.get(Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}')),
+        http.get(
+          Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}/images'),
+        ),
+        http.get(
+          Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}/rating'),
+        ),
+      ]);
 
-  Future<void> _fetchImages() async {
-    try {
-      final res = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}/images'),
-      );
-      if (res.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(res.body);
-        if (mounted) {
-          setState(() {
-            _imageUrls = data
+      if (_streamController.isClosed) return;
+
+      final ticketRes = results[0];
+      final imagesRes = results[1];
+      final ratingRes = results[2];
+
+      if (ticketRes.statusCode != 200) return;
+
+      final ticket = RepairTicket.fromJson(jsonDecode(ticketRes.body));
+
+      final imageUrls = imagesRes.statusCode == 200
+          ? (jsonDecode(imagesRes.body) as List)
                 .map((e) => '${AppConfig.baseUrl}${e['image_url']}')
                 .cast<String>()
-                .toList();
-          });
-        }
-      }
-    } catch (_) {}
-  }
+                .toList()
+          : <String>[];
 
-  Future<void> _fetchRating() async {
-    try {
-      final res = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}/rating'),
+      final ratingData = ratingRes.statusCode == 200
+          ? jsonDecode(ratingRes.body)
+          : null;
+
+      _streamController.add(
+        _TrackingSnapshot(
+          ticket: ticket,
+          imageUrls: imageUrls,
+          ratingScore: ratingData?['score'] as int?,
+          ratingComment: ratingData?['comment'] as String?,
+        ),
       );
-      if (res.statusCode == 200 && mounted) {
-        final data = jsonDecode(res.body);
-        setState(() {
-          _existingRatingScore = data['score'] as int?;
-          _existingRatingComment = data['comment'] as String?;
-        });
-      }
     } catch (_) {}
   }
 
@@ -128,12 +120,9 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
       );
       if (!mounted) return;
       if (res.statusCode == 200 || res.statusCode == 201) {
-        final data = jsonDecode(res.body);
-        setState(() {
-          _existingRatingScore = data['score'] as int?;
-          _existingRatingComment = data['comment'] as String?;
-          _selectedRating = null;
-        });
+        if (!mounted) return;
+        setState(() => _selectedRating = null);
+        _fetchAndEmit(); // stream จะอัปเดต rating ทันที
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('ขอบคุณสำหรับการให้คะแนน!'),
@@ -271,7 +260,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
             backgroundColor: Color(0xFF16A34A),
           ),
         );
-        await _fetchAll();
+        _fetchAndEmit(); // stream refresh ทันที
       } else {
         final body = jsonDecode(res.body);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -315,70 +304,30 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF94A3B8)),
-            onPressed: _fetchAll,
-          ),
-        ],
       ),
-      body: _isLoading
-          ? const Center(
+      body: StreamBuilder<_TrackingSnapshot>(
+        stream: _streamController.stream,
+        builder: (context, snap) {
+          if (!snap.hasData) {
+            return const Center(
               child: CircularProgressIndicator(color: Color(0xFF137FEC)),
-            )
-          : _error != null
-          ? _buildErrorState()
-          : _buildContent(),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.wifi_off_rounded,
-              size: 60,
-              color: Color(0xFFCBD5E1),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _error ?? 'เกิดข้อผิดพลาด',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _fetchAll,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF137FEC),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'ลองใหม่',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
+            );
+          }
+          return _buildContent(snap.data!);
+        },
       ),
     );
   }
 
-  Widget _buildContent() {
-    final ticket = _ticket!;
+  Widget _buildContent(_TrackingSnapshot snap) {
+    final ticket = snap.ticket;
     final canCancel =
         ticket.assignedToId == null && !ticket.isDone && !ticket.isCancelled;
 
     return Stack(
       children: [
         RefreshIndicator(
-          onRefresh: _fetchAll,
+          onRefresh: () async => _fetchAndEmit(),
           color: const Color(0xFF137FEC),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -390,14 +339,14 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                   _buildStatusSection(ticket),
                   const SizedBox(height: 20),
                 ],
-                _buildTicketInfoCard(ticket),
+                _buildTicketInfoCard(ticket, snap.imageUrls),
                 const SizedBox(height: 20),
                 _buildFeesCard(),
                 const SizedBox(height: 20),
                 _buildTechnicianCard(ticket),
                 if (ticket.isDone) ...[
                   const SizedBox(height: 20),
-                  _buildRatingSection(),
+                  _buildRatingSection(snap.ratingScore, snap.ratingComment),
                 ],
               ],
             ),
@@ -537,7 +486,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
   }
 
   // ── 2. Ticket Info Card ────────────────────────────────────────────────────
-  Widget _buildTicketInfoCard(RepairTicket ticket) {
+  Widget _buildTicketInfoCard(RepairTicket ticket, List<String> imageUrls) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: _cardDecoration(),
@@ -561,7 +510,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
           const SizedBox(height: 16),
 
           // ── Images ──
-          _buildImageCarousel(),
+          _buildImageCarousel(imageUrls),
           const SizedBox(height: 16),
 
           if (ticket.detailDesc != null && ticket.detailDesc!.isNotEmpty) ...[
@@ -618,8 +567,8 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
   }
 
   // ── Image carousel with dot indicators ────────────────────────────────────
-  Widget _buildImageCarousel() {
-    if (_imageUrls.isEmpty) {
+  Widget _buildImageCarousel(List<String> imageUrls) {
+    if (imageUrls.isEmpty) {
       return Container(
         height: 180,
         decoration: BoxDecoration(
@@ -653,12 +602,12 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
               children: [
                 PageView.builder(
                   controller: _pageController,
-                  itemCount: _imageUrls.length,
+                  itemCount: imageUrls.length,
                   onPageChanged: (i) => setState(() => _currentImagePage = i),
                   itemBuilder: (_, i) => GestureDetector(
-                    onTap: () => _openFullscreen(i),
+                    onTap: () => _openFullscreen(imageUrls, i),
                     child: Image.network(
-                      _imageUrls[i],
+                      imageUrls[i],
                       fit: BoxFit.cover,
                       loadingBuilder: (_, child, progress) => progress == null
                           ? child
@@ -685,7 +634,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                   ),
                 ),
                 // Image count badge (top-right)
-                if (_imageUrls.length > 1)
+                if (imageUrls.length > 1)
                   Positioned(
                     top: 10,
                     right: 10,
@@ -699,7 +648,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '${_currentImagePage + 1}/${_imageUrls.length}',
+                        '${_currentImagePage + 1}/${imageUrls.length}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -713,7 +662,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                   bottom: 10,
                   right: 10,
                   child: GestureDetector(
-                    onTap: () => _openFullscreen(_currentImagePage),
+                    onTap: () => _openFullscreen(imageUrls, _currentImagePage),
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
@@ -734,11 +683,11 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
         ),
 
         // Dot indicators
-        if (_imageUrls.length > 1) ...[
+        if (imageUrls.length > 1) ...[
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(_imageUrls.length, (i) {
+            children: List.generate(imageUrls.length, (i) {
               final isActive = i == _currentImagePage;
               return GestureDetector(
                 onTap: () => _pageController.animateToPage(
@@ -766,12 +715,12 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
     );
   }
 
-  void _openFullscreen(int index) {
+  void _openFullscreen(List<String> imageUrls, int index) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) =>
-            _FullscreenGallery(imageUrls: _imageUrls, initialIndex: index),
+            _FullscreenGallery(imageUrls: imageUrls, initialIndex: index),
       ),
     );
   }
@@ -1100,8 +1049,11 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
   }
 
   // ── 5. Rating Section ──────────────────────────────────────────────────────
-  Widget _buildRatingSection() {
-    final alreadyRated = _existingRatingScore != null;
+  Widget _buildRatingSection(
+    int? existingRatingScore,
+    String? existingRatingComment,
+  ) {
+    final alreadyRated = existingRatingScore != null;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1152,7 +1104,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                       Row(
                         children: List.generate(5, (i) {
                           return Icon(
-                            i < _existingRatingScore!
+                            i < existingRatingScore!
                                 ? Icons.star_rounded
                                 : Icons.star_outline_rounded,
                             color: Colors.amber,
@@ -1162,7 +1114,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        '${_existingRatingScore}/5',
+                        '${existingRatingScore}/5',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -1171,11 +1123,11 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                       ),
                     ],
                   ),
-                  if (_existingRatingComment != null &&
-                      _existingRatingComment!.isNotEmpty) ...[
+                  if (existingRatingComment != null &&
+                      existingRatingComment!.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     Text(
-                      '"${_existingRatingComment!}"',
+                      '"${existingRatingComment!}"',
                       style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF78350F),
@@ -1444,4 +1396,19 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
           : null,
     );
   }
+}
+
+// ── Data class ────────────────────────────────────────────────────────────────
+class _TrackingSnapshot {
+  final RepairTicket ticket;
+  final List<String> imageUrls;
+  final int? ratingScore;
+  final String? ratingComment;
+
+  const _TrackingSnapshot({
+    required this.ticket,
+    required this.imageUrls,
+    this.ratingScore,
+    this.ratingComment,
+  });
 }

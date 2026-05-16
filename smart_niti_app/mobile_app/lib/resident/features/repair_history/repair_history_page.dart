@@ -1,5 +1,6 @@
 // lib/resident/features/repair_history/repair_history_page.dart
 
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,68 +18,83 @@ class RepairHistoryPage extends StatefulWidget {
 
 class _RepairHistoryPageState extends State<RepairHistoryPage> {
   String _selectedFilter = 'All';
-  List<RepairTicket> _allTickets = [];
-  bool _isLoading = true;
-  String? _error;
+
+  // ── Stream (real-time polling) ────────────────────────────────────────────
+  final StreamController<_HistorySnapshot> _streamController =
+      StreamController.broadcast();
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
-    _fetchTickets();
+    _fetchAndEmit();
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _fetchAndEmit(),
+    );
   }
 
-  Future<void> _fetchTickets() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    _streamController.close();
+    super.dispose();
+  }
 
+  Future<void> _fetchAndEmit() async {
+    if (_streamController.isClosed) return;
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) {
-        setState(() {
-          _error = 'กรุณา Login ก่อน';
-          _isLoading = false;
-        });
-        return;
-      }
+      if (uid == null) return;
 
       final uri = Uri.parse(
         '${AppConfig.baseUrl}/tickets/',
       ).replace(queryParameters: {'req_user_id': uid});
+      final ticketRes = await http.get(uri);
+      if (ticketRes.statusCode != 200) return;
 
-      final response = await http.get(uri);
+      final tickets = (jsonDecode(ticketRes.body) as List)
+          .map((e) => RepairTicket.fromJson(e))
+          .toList();
 
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        setState(() {
-          _allTickets = data.map((e) => RepairTicket.fromJson(e)).toList();
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _error = 'โหลดข้อมูลไม่สำเร็จ (${response.statusCode})';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'เชื่อมต่อ Server ไม่ได้: $e';
-        _isLoading = false;
-      });
-    }
+      // ดึง rating ของ done tickets ทั้งหมดพร้อมกัน
+      final doneTickets = tickets.where((t) => t.isDone).toList();
+      final ratingEntries = await Future.wait(
+        doneTickets.map((t) async {
+          try {
+            final res = await http.get(
+              Uri.parse('${AppConfig.baseUrl}/tickets/${t.id}/rating'),
+            );
+            final score = res.statusCode == 200
+                ? (jsonDecode(res.body)['score'] as int?)
+                : null;
+            return MapEntry(t.id, score);
+          } catch (_) {
+            return MapEntry(t.id, null);
+          }
+        }),
+      );
+
+      if (_streamController.isClosed) return;
+      _streamController.add(
+        _HistorySnapshot(
+          tickets: tickets,
+          ratings: Map.fromEntries(ratingEntries),
+        ),
+      );
+    } catch (_) {}
   }
 
-  List<RepairTicket> get _filteredTickets {
+  List<RepairTicket> _filteredTickets(List<RepairTicket> all) {
     switch (_selectedFilter) {
       case 'Active':
-        return _allTickets.where((t) => t.isActive).toList();
+        return all.where((t) => t.isActive).toList();
       case 'Completed':
-        return _allTickets.where((t) => t.isDone).toList();
+        return all.where((t) => t.isDone).toList();
       case 'Cancelled':
-        return _allTickets.where((t) => t.isCancelled).toList();
+        return all.where((t) => t.isCancelled).toList();
       default:
-        return _allTickets;
+        return all;
     }
   }
 
@@ -102,17 +118,16 @@ class _RepairHistoryPageState extends State<RepairHistoryPage> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF94A3B8)),
-            onPressed: _fetchTickets,
-          ),
-        ],
       ),
       body: Column(
         children: [
           _buildFilterBar(),
-          Expanded(child: _buildBody()),
+          Expanded(
+            child: StreamBuilder<_HistorySnapshot>(
+              stream: _streamController.stream,
+              builder: (context, snap) => _buildBody(snap),
+            ),
+          ),
         ],
       ),
     );
@@ -167,52 +182,16 @@ class _RepairHistoryPageState extends State<RepairHistoryPage> {
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
+  Widget _buildBody(AsyncSnapshot<_HistorySnapshot> snap) {
+    // ยังไม่มีข้อมูลครั้งแรก — แสดง loading
+    if (!snap.hasData) {
       return const Center(
         child: CircularProgressIndicator(color: Color(0xFF137FEC)),
       );
     }
 
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.wifi_off_rounded,
-                size: 60,
-                color: Color(0xFFCBD5E1),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _fetchTickets,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF137FEC),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'ลองใหม่',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final filtered = _filteredTickets;
+    final filtered = _filteredTickets(snap.data!.tickets);
+    final ratings = snap.data!.ratings;
 
     if (filtered.isEmpty) {
       return Center(
@@ -241,17 +220,18 @@ class _RepairHistoryPageState extends State<RepairHistoryPage> {
     }
 
     return RefreshIndicator(
-      onRefresh: _fetchTickets,
+      onRefresh: () async => _fetchAndEmit(),
       color: const Color(0xFF137FEC),
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         itemCount: filtered.length,
-        itemBuilder: (context, index) => _buildRepairCard(filtered[index]),
+        itemBuilder: (context, index) =>
+            _buildRepairCard(filtered[index], ratings),
       ),
     );
   }
 
-  Widget _buildRepairCard(RepairTicket ticket) {
+  Widget _buildRepairCard(RepairTicket ticket, Map<int, int?> ratings) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -359,7 +339,7 @@ class _RepairHistoryPageState extends State<RepairHistoryPage> {
                 ),
 
                 // Rating / Status indicator
-                _buildTrailingWidget(ticket),
+                _buildTrailingWidget(ticket, ratings),
               ],
             ),
           ],
@@ -412,20 +392,64 @@ class _RepairHistoryPageState extends State<RepairHistoryPage> {
     );
   }
 
-  Widget _buildTrailingWidget(RepairTicket ticket) {
+  Widget _buildTrailingWidget(RepairTicket ticket, Map<int, int?> ratings) {
     if (ticket.isDone) {
+      if (!ratings.containsKey(ticket.id)) {
+        return const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Color(0xFFCBD5E1),
+          ),
+        );
+      }
+
+      final score = ratings[ticket.id];
+
+      if (score == null) {
+        // ยังไม่ได้ให้คะแนน
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Row(
+              children: List.generate(
+                5,
+                (_) => const Icon(
+                  Icons.star_outline_rounded,
+                  color: Color(0xFFCBD5E1),
+                  size: 13,
+                ),
+              ),
+            ),
+            const Text(
+              'ยังไม่ให้คะแนน',
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+            ),
+          ],
+        );
+      }
+
+      // มีคะแนนแล้ว — แสดงดาวตามจริง
       return Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Row(
-            children: List.generate(
-              5,
-              (_) => const Icon(Icons.star, color: Colors.amber, size: 13),
-            ),
+            children: List.generate(5, (i) {
+              return Icon(
+                i < score ? Icons.star_rounded : Icons.star_outline_rounded,
+                color: Colors.amber,
+                size: 13,
+              );
+            }),
           ),
-          const Text(
-            'Rating Given',
-            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+          Text(
+            '$score / 5',
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       );
@@ -437,7 +461,7 @@ class _RepairHistoryPageState extends State<RepairHistoryPage> {
           borderRadius: BorderRadius.circular(6),
         ),
         child: const Text(
-          'No Rating',
+          'Cancelled',
           style: TextStyle(
             color: Color(0xFF94A3B8),
             fontSize: 11,
@@ -446,7 +470,6 @@ class _RepairHistoryPageState extends State<RepairHistoryPage> {
         ),
       );
     } else {
-      // Active ticket — show chevron to go to tracking
       return const Icon(
         Icons.chevron_right,
         color: Color(0xFF137FEC),
@@ -454,4 +477,12 @@ class _RepairHistoryPageState extends State<RepairHistoryPage> {
       );
     }
   }
+}
+
+// ── Data class ────────────────────────────────────────────────────────────────
+class _HistorySnapshot {
+  final List<RepairTicket> tickets;
+  final Map<int, int?> ratings; // ticketId → score (null = ยังไม่ได้ให้คะแนน)
+
+  const _HistorySnapshot({required this.tickets, required this.ratings});
 }
