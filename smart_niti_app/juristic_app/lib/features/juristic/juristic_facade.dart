@@ -1,9 +1,71 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import '../auth/adapters/auth_adapter.dart';
+import '../../core/services/api_service.dart';
+import '../home/models/ticket_model.dart';
 
 class JuristicFacade {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final ApiService _api = ApiService();
+
+  // ─── Auth ───────────────────────────────────────────────────────
 
   Future<User?> login(AuthAdapter adapter) => adapter.login();
   Future<void> logout() => _auth.signOut();
+
+  // ─── Tickets ────────────────────────────────────────────────────
+
+  /// ดึง ticket ทั้งหมด
+  Future<List<TicketModel>> getTickets({String? reqUserId}) async {
+    final raw = await _api.getTickets(reqUserId: reqUserId);
+    return raw.map((j) => TicketModel.fromJson(j)).toList();
+  }
+
+  /// ดึง ticket เดี่ยว
+  Future<TicketModel> getTicket(int ticketId) async {
+    final raw = await _api.getTicket(ticketId);
+    return TicketModel.fromJson(raw);
+  }
+
+  /// อัปเดต status ticket
+  Future<TicketModel> updateTicketStatus(int ticketId, String status) async {
+    final raw = await _api.updateTicketStatus(ticketId, status);
+    return TicketModel.fromJson(raw);
+  }
+
+  // ─── Stats helpers ──────────────────────────────────────────────
+
+  /// นับ ticket แยกตาม status จาก list ที่มีอยู่แล้ว
+  Map<String, int> countByStatus(List<TicketModel> tickets) {
+    final map = <String, int>{
+      'submitted': 0,
+      'assigned': 0,
+      'in_progress': 0,
+      'done': 0,
+      'cancelled': 0,
+    };
+    for (final t in tickets) {
+      switch (t.status) {
+        case TicketStatus.submitted:
+          map['submitted'] = (map['submitted'] ?? 0) + 1;
+          break;
+        case TicketStatus.assigned:
+          map['assigned'] = (map['assigned'] ?? 0) + 1;
+          break;
+        case TicketStatus.inProgress:
+          map['in_progress'] = (map['in_progress'] ?? 0) + 1;
+          break;
+        case TicketStatus.done:
+          map['done'] = (map['done'] ?? 0) + 1;
+          break;
+        case TicketStatus.cancelled:
+          map['cancelled'] = (map['cancelled'] ?? 0) + 1;
+          break;
+      }
+    }
+    return map;
+  }
+
+  // ─── Users ──────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getUser(String uid) => _api.getUser(uid);
 }
