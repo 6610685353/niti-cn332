@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Enum
+from sqlalchemy.orm import relationship
 from database import Base
 import datetime
 import enum
@@ -24,15 +25,22 @@ class UserModel(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
+    resident_info = relationship("ResidentModel", back_populates="user", cascade="all, delete-orphan", uselist=False)
+    technician_info = relationship("TechnicianModel", back_populates="user", cascade="all, delete-orphan", uselist=False)
+
 class ResidentModel(Base):
     __tablename__ = "residents"
 
-    uid = Column(String, ForeignKey("users.uid"), primary_key=True)
+    uid = Column(String, ForeignKey("users.uid", ondelete="CASCADE"), primary_key=True)
     room_no = Column(String)
     building = Column(String)
+
+    user = relationship("UserModel", back_populates="resident_info")
 
 class TechnicianModel(Base):
     __tablename__ = "technicians"
 
-    uid = Column(String, ForeignKey("users.uid"), primary_key=True)
+    uid = Column(String, ForeignKey("users.uid", ondelete="CASCADE"), primary_key=True)
     rating = Column(Float, default=0.0)
+
+    user = relationship("UserModel", back_populates="technician_info")

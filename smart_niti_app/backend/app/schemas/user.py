@@ -8,7 +8,10 @@ class UserBase(BaseModel):
     last_name: str
     role: UserRole
     status: UserStatus = UserStatus.active
+    
     image_url: Optional[str] = None
+    room_no: Optional[str] = None
+    building: Optional[str] = None
 
 class UserCreate(UserBase):
     uid: str  # UID ที่ได้จาก Firebase Auth
