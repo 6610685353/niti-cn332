@@ -1,3 +1,5 @@
+import os
+from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.endpoints import tickets, users
@@ -21,6 +23,14 @@ app.add_middleware(
 )
 
 Base.metadata.create_all(bind=engine)
+
+# ── Static files (รูปภาพที่ upload) ──────────────────────────────────────────
+# สร้าง directory ก่อนถ้ายังไม่มี
+os.makedirs("static/ticket_images", exist_ok=True)
+os.makedirs("static/avatars", exist_ok=True)
+ 
+# Mount /static → เข้าถึงได้ที่ http://localhost:8000/static/...
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.include_router(tickets.router)
 app.include_router(users.router)

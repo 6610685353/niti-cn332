@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../models/repair_request_model.dart';
 import '../../../core/app_config.dart';
+import 'package:http_parser/http_parser.dart';
 
 class RepairRequestProvider extends ChangeNotifier {
   RepairRequestModel _requestData = RepairRequestModel();
@@ -197,7 +198,9 @@ class RepairRequestProvider extends ChangeNotifier {
           await http.MultipartFile.fromPath(
             'file',
             file.path,
-            // contentType: MediaType.parse(mimeType), // ต้อง import http_parser ถ้าจะใช้
+            contentType: MediaType.parse(
+              mimeType,
+            ), // ต้อง import http_parser ถ้าจะใช้
           ),
         );
 

@@ -81,21 +81,26 @@ class RepairTicket {
   }
 
   /// แปลงสถานะ backend → index สำหรับ UI tracking steps
-  /// Steps: 0=On Way, 1=Arrived, 2=Repairing, 3=Done
+  /// Steps: 0=Assigned, 1=In Progress, 2=Done
   int get trackingStepIndex {
     switch (status) {
-      case TicketStatus.submitted:
-        return 0;
       case TicketStatus.assigned:
-        return 1;
+        return 0;
       case TicketStatus.inProgress:
-        return 2;
+        return 1;
       case TicketStatus.done:
-        return 3;
+        return 2;
       default:
         return 0;
     }
   }
+
+  /// แสดง Current Status stepper เฉพาะสถานะที่มี progress จริง
+  /// submitted และ cancelled ไม่ต้องแสดง
+  bool get showStatusStepper =>
+      status == TicketStatus.assigned ||
+      status == TicketStatus.inProgress ||
+      status == TicketStatus.done;
 
   bool get isCancelled => status == TicketStatus.cancelled;
   bool get isDone => status == TicketStatus.done;

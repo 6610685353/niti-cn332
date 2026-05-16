@@ -312,8 +312,10 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildStatusSection(ticket),
-                const SizedBox(height: 20),
+                if (ticket.showStatusStepper) ...[
+                  _buildStatusSection(ticket),
+                  const SizedBox(height: 20),
+                ],
                 _buildTicketInfoCard(ticket),
                 const SizedBox(height: 20),
                 _buildFeesCard(),
@@ -380,8 +382,11 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
 
   // ── 1. Status Stepper ──────────────────────────────────────────────────────
   Widget _buildStatusSection(RepairTicket ticket) {
-    const steps = ['On Way', 'Arrived', 'Repairing', 'Done'];
-    final activeStep = ticket.isCancelled ? -1 : ticket.trackingStepIndex;
+    // submitted และ cancelled ไม่แสดง Current Status
+    if (!ticket.showStatusStepper) return const SizedBox.shrink();
+
+    const steps = ['Assigned', 'In Progress', 'Done'];
+    final activeStep = ticket.trackingStepIndex;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -398,59 +403,27 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
             ),
           ),
           const SizedBox(height: 14),
-          ticket.isCancelled
-              ? Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF1F2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFECACA)),
-                  ),
-                  child: Row(
-                    children: const [
-                      Icon(
-                        Icons.cancel_outlined,
-                        color: Color(0xFFEF4444),
-                        size: 20,
+          Row(
+            children: List.generate(steps.length, (i) {
+              final isActive = i == activeStep;
+              final isDone = i < activeStep;
+              return Expanded(
+                child: Row(
+                  children: [
+                    Expanded(child: _buildStepChip(steps[i], isActive, isDone)),
+                    if (i < steps.length - 1)
+                      Container(
+                        width: 4,
+                        height: 2,
+                        color: isDone || isActive
+                            ? const Color(0xFF137FEC)
+                            : const Color(0xFFE2E8F0),
                       ),
-                      SizedBox(width: 10),
-                      Text(
-                        'Ticket นี้ถูกยกเลิกแล้ว',
-                        style: TextStyle(
-                          color: Color(0xFFEF4444),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : Row(
-                  children: List.generate(steps.length, (i) {
-                    final isActive = i == activeStep;
-                    final isDone = i < activeStep;
-                    return Expanded(
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _buildStepChip(steps[i], isActive, isDone),
-                          ),
-                          if (i < steps.length - 1)
-                            Container(
-                              width: 4,
-                              height: 2,
-                              color: isDone || isActive
-                                  ? const Color(0xFF137FEC)
-                                  : const Color(0xFFE2E8F0),
-                            ),
-                        ],
-                      ),
-                    );
-                  }),
+                  ],
                 ),
+              );
+            }),
+          ),
         ],
       ),
     );
