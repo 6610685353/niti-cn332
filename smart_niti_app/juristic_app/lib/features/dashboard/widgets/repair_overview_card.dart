@@ -2,12 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:juristic_app/core/constants/app_colors.dart';
 
 class RepairOverviewCard extends StatelessWidget {
-  const RepairOverviewCard({super.key});
+  final int total;
+  final int submitted;
+  final int assigned;
+  final int inProgress;
+  final int done;
+
+  const RepairOverviewCard({
+    super.key,
+    required this.total,
+    required this.submitted,
+    required this.assigned,
+    required this.inProgress,
+    required this.done,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // คำนวณ % จาก total (ป้องกัน div/0)
+    double pct(int n) => total == 0 ? 0 : n / total;
+
     return Container(
-      padding: const EdgeInsets.all(32), // Padding รอบนอกให้พอดีกับการ์ดอื่นๆ
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -20,32 +36,30 @@ class RepairOverviewCard extends StatelessWidget {
             "e-Repair Overview",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 36), // ดันเนื้อหาลงมาให้มีพื้นที่หายใจ
-
+          const SizedBox(height: 36),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // --- ฝั่งซ้าย: 142 Total ---
+              // ── ฝั่งซ้าย: ตัวเลข Total ──
               Expanded(
                 flex: 2,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      "142",
-                      style: TextStyle(
-                        fontSize: 48, // ตัวใหญ่
-                        fontWeight: FontWeight.w800, // หนาพิเศษ
+                    Text(
+                      "$total",
+                      style: const TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.w800,
                         height: 1.0,
-                        letterSpacing:
-                            -1, // บีบช่องไฟตัวเลขให้ดูแน่นขึ้นแบบต้นฉบับ
+                        letterSpacing: -1,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       "Total",
                       style: TextStyle(
-                        color: Colors.grey.shade400, // สีเทาอ่อนๆ
+                        color: Colors.grey.shade400,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -54,38 +68,35 @@ class RepairOverviewCard extends StatelessWidget {
                 ),
               ),
 
-              // --- ฝั่งขวา: แถบ Progress Bar 4 แถว ---
+              // ── ฝั่งขวา: Progress Bars ──
               Expanded(
-                flex: 5, // ให้พื้นที่ฝั่งขวาเยอะกว่า เส้นจะได้ยาวสวย
+                flex: 5,
                 child: Padding(
-                  padding: const EdgeInsets.only(
-                    left: 32.0,
-                  ), // เว้นระยะห่างจากตัวเลข 142
+                  padding: const EdgeInsets.only(left: 32.0),
                   child: Column(
-                    mainAxisSize:
-                        MainAxisSize.min, // ให้ Column สูงพอดีกับเนื้อหา
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       _buildProgressBar(
                         "Pending Request",
-                        0.25,
+                        pct(submitted),
                         AppColors.errorRed,
                       ),
-                      const SizedBox(height: 20), // ระยะห่างระหว่างแถวแบบเป๊ะๆ
+                      const SizedBox(height: 20),
                       _buildProgressBar(
                         "Pending Approval",
-                        0.05,
+                        pct(assigned),
                         AppColors.warningOrange,
                       ),
                       const SizedBox(height: 20),
                       _buildProgressBar(
                         "In Progress",
-                        0.55,
+                        pct(inProgress),
                         AppColors.primaryBlue,
                       ),
                       const SizedBox(height: 20),
                       _buildProgressBar(
                         "Completed",
-                        0.15,
+                        pct(done),
                         AppColors.successGreen,
                       ),
                     ],
@@ -94,13 +105,12 @@ class RepairOverviewCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16), // เว้นระยะด้านล่างเผื่อไว้ให้สมดุล
+          const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  // Widget ย่อยสำหรับสร้างเส้นแต่ละเส้น
   Widget _buildProgressBar(String label, double percent, Color color) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,11 +118,10 @@ class RepairOverviewCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // ส่วนจุดสีและข้อความ
             Row(
               children: [
                 Container(
-                  width: 6, // จุดเล็กๆ ตามต้นฉบับ
+                  width: 6,
                   height: 6,
                   decoration: BoxDecoration(
                     color: color,
@@ -130,22 +139,20 @@ class RepairOverviewCard extends StatelessWidget {
                 ),
               ],
             ),
-            // ส่วนตัวเลขเปอร์เซ็นต์
             Text(
               "${(percent * 100).toInt()}%",
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ],
         ),
-        const SizedBox(height: 8), // ระยะห่างระหว่างตัวหนังสือกับเส้น
-        // ตัวเส้น Progress Bar
+        const SizedBox(height: 8),
         ClipRRect(
-          borderRadius: BorderRadius.circular(10), // ขอบมน
+          borderRadius: BorderRadius.circular(10),
           child: LinearProgressIndicator(
             value: percent,
-            backgroundColor: Colors.grey.shade100, // พื้นหลังสีเทาอ่อนมากๆ
+            backgroundColor: Colors.grey.shade100,
             color: color,
-            minHeight: 4, // ทำให้เส้น "บาง" ลงเหมือนใน Figma เป๊ะๆ
+            minHeight: 4,
           ),
         ),
       ],

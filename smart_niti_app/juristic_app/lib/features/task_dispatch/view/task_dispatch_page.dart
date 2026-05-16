@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:juristic_app/core/constants/app_colors.dart';
+import 'package:juristic_app/features/home/models/ticket_model.dart';
+import 'package:juristic_app/features/juristic/juristic_facade.dart';
 import '../widgets/mini_stat_card.dart';
 import '../widgets/ticket_card.dart';
 import '../widgets/technician_row.dart';
@@ -12,10 +14,84 @@ class TaskDispatchPage extends StatefulWidget {
 }
 
 class _TaskDispatchPageState extends State<TaskDispatchPage> {
+  final _facade = JuristicFacade();
+
+  List<TicketModel> _tickets = [];
+  bool _loading = true;
+  String? _error;
   int _selectedTicketIndex = -1;
 
   @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+      _selectedTicketIndex = -1;
+    });
+    try {
+      final tickets = await _facade.getTickets();
+      setState(() {
+        _tickets = tickets;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  // ─── filtered lists ────────────────────────────────────────────
+
+  List<TicketModel> get _unassigned =>
+      _tickets.where((t) => t.status == TicketStatus.submitted).toList();
+
+  List<TicketModel> get _assigned =>
+      _tickets.where((t) => t.status == TicketStatus.assigned).toList();
+
+  List<TicketModel> get _inProgress =>
+      _tickets.where((t) => t.status == TicketStatus.inProgress).toList();
+
+  List<TicketModel> get _done =>
+      _tickets.where((t) => t.status == TicketStatus.done).toList();
+
+  // ─── build ────────────────────────────────────────────────────
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: _loadData,
+              icon: const Icon(Icons.refresh),
+              label: const Text('ลองใหม่'),
+            ),
+          ],
+        ),
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isNarrow = constraints.maxWidth < 1100;
@@ -23,89 +99,86 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
         return GestureDetector(
           onTap: () {
             if (_selectedTicketIndex != -1) {
-              setState(() {
-                _selectedTicketIndex = -1;
-              });
+              setState(() => _selectedTicketIndex = -1);
             }
           },
           behavior: HitTestBehavior.opaque,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Task Assignment & Dispatch",
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 24),
+          child: RefreshIndicator(
+            onRefresh: _loadData,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Task Assignment & Dispatch",
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 24),
 
-                // --- 1. Top Mini Stat Cards ---
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: [
-                    _buildStatCard(
-                      "Total Pending Request",
-                      "2",
-                      Icons.assignment_outlined,
-                      AppColors.warningOrange,
-                      constraints.maxWidth,
-                    ),
-                    _buildStatCard(
-                      "Total Pending Approval",
-                      "2",
-                      Icons.assignment_outlined,
-                      AppColors.warningOrange,
-                      constraints.maxWidth,
-                    ),
-                    _buildStatCard(
-                      "In progress",
-                      "4",
-                      Icons.assignment_outlined,
-                      AppColors.warningOrange,
-                      constraints.maxWidth,
-                    ),
-                    _buildStatCard(
-                      "Complete",
-                      "10",
-                      Icons.assignment_outlined,
-                      AppColors.warningOrange,
-                      constraints.maxWidth,
-                    ),
-                    _buildStatCard(
-                      "Technician Active",
-                      "5",
-                      Icons.people_alt,
-                      AppColors.primaryBlue,
-                      constraints.maxWidth,
-                      subValue: "/ 15",
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 32),
-
-                // --- 2. Main Content ---
-                isNarrow
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildUnassignedTickets(),
-                          const SizedBox(height: 24),
-                          _buildTechnicianAvailability(),
-                        ],
-                      )
-                    : Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(flex: 4, child: _buildUnassignedTickets()),
-                          const SizedBox(width: 24),
-                          Expanded(
-                              flex: 5, child: _buildTechnicianAvailability()),
-                        ],
+                  // ── Mini Stat Cards ──────────────────────────────
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: [
+                      // เอา Expanded ที่คลุมตรงนี้ออกไปแล้ว
+                      _buildStatCard(
+                        "Total Pending Request",
+                        "${_unassigned.length}",
+                        Icons.assignment_outlined,
+                        AppColors.errorRed,
+                        constraints.maxWidth,
                       ),
-              ],
+                      _buildStatCard(
+                        "Pending Approval",
+                        "${_assigned.length}",
+                        Icons.assignment_outlined,
+                        AppColors.warningOrange,
+                        constraints.maxWidth,
+                      ),
+                      _buildStatCard(
+                        "In Progress",
+                        "${_inProgress.length}",
+                        Icons.assignment_outlined,
+                        AppColors.primaryBlue,
+                        constraints.maxWidth,
+                      ),
+                      _buildStatCard(
+                        "Complete",
+                        "${_done.length}",
+                        Icons.check_circle_outline,
+                        AppColors.successGreen,
+                        constraints.maxWidth,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // ── Main Content ─────────────────────────────────
+                  isNarrow
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildUnassignedTickets(),
+                            const SizedBox(height: 24),
+                            _buildTechnicianAvailability(),
+                          ],
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(flex: 4, child: _buildUnassignedTickets()),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              flex: 5,
+                              child: _buildTechnicianAvailability(),
+                            ),
+                          ],
+                        ),
+                ],
+              ),
             ),
           ),
         );
@@ -121,21 +194,21 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
     double maxWidth, {
     String? subValue,
   }) {
-    // Calculate width based on screen size
     double cardWidth;
     if (maxWidth < 600) {
-      cardWidth = maxWidth - 64; // Full width minus padding
+      cardWidth = maxWidth - 64;
     } else if (maxWidth < 900) {
-      cardWidth = (maxWidth - 64 - 16) / 2; // 2 cards per row
+      cardWidth = ((maxWidth - 64 - 16) / 2).floorToDouble();
     } else if (maxWidth < 1200) {
-      cardWidth = (maxWidth - 64 - 32) / 3; // 3 cards per row
+      cardWidth = ((maxWidth - 64 - 32) / 3).floorToDouble();
     } else {
-      cardWidth = (maxWidth - 64 - 64) / 5; // 5 cards per row
+      // ใช้ .floorToDouble() ปัดเศษลงเพื่อป้องกันปัญหาเบราว์เซอร์คำนวณจุดทศนิยมเกินจนกล่องตกบรรทัด
+      cardWidth = ((maxWidth - 64 - 48) / 4).floorToDouble();
     }
 
     return SizedBox(
       width: cardWidth,
-      height: 100,
+      // สิ่งสำคัญ!: ห้ามมีบรรทัด height: 100, เด็ดขาด เพื่อแก้บั๊กล้น 7 pixels
       child: MiniStatCard(
         title: title,
         value: value,
@@ -151,10 +224,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(8),
@@ -178,9 +248,9 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
-                    "Unassigned Tickets (8)",
-                    style: TextStyle(
+                  Text(
+                    "Unassigned Tickets (${_unassigned.length})",
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -188,76 +258,53 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                   ),
                 ],
               ),
-              Icon(
-                Icons.filter_list,
-                color: Colors.grey.shade400,
-                size: 20,
-              ),
+              Icon(Icons.refresh, color: Colors.grey.shade400, size: 20),
             ],
           ),
         ),
         const SizedBox(height: 16),
 
-        // ลิสต์การ์ดงาน
-        ListView(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            TicketCard(
-              location: "Building A - Room 512",
-              roomType: "Bathroom",
-              tag: "Plumbing",
-              tagColor: const Color(0xFF0052CC),
-              tagBgColor: const Color(0xFFE6F0FF),
-              title: "Sink pipe leak",
-              description:
-                  "Major water leak reported in master bathroom. Flooding neighbor below.",
-              timeAgo: "12 mins ago",
-              assignedTo: "-",
-              isSelected: _selectedTicketIndex == 0,
-              onTap: () {
-                setState(() {
-                  _selectedTicketIndex = _selectedTicketIndex == 0 ? -1 : 0;
-                });
-              },
+        if (_unassigned.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade200),
             ),
-            TicketCard(
-              location: "Building C - Room 112",
-              roomType: "Bathroom",
-              tag: "Plumbing",
-              tagColor: const Color(0xFF0052CC),
-              tagBgColor: const Color(0xFFE6F0FF),
-              title: "Water Heater Leak",
-              description:
-                  "Water heater leaking in bathroom. Water pooling on floor.",
-              timeAgo: "34 mins ago",
-              assignedTo: "Jane Doe",
-              isSelected: _selectedTicketIndex == 1,
-              onTap: () {
-                setState(() {
-                  _selectedTicketIndex = _selectedTicketIndex == 1 ? -1 : 1;
-                });
-              },
+            child: Center(
+              child: Text(
+                "No ticket",
+                style: TextStyle(color: Colors.grey.shade400),
+              ),
             ),
-            TicketCard(
-              location: "Building B - Room 378",
-              roomType: "Living Room",
-              tag: "Electric",
-              tagColor: const Color(0xFFFFAB00),
-              tagBgColor: const Color(0xFFFFF0D4),
-              title: "Power Outlet Not Working",
-              description: "Multiple power outlets not functioning in living room.",
-              timeAgo: "1 hour ago",
-              assignedTo: "-",
-              isSelected: _selectedTicketIndex == 2,
-              onTap: () {
-                setState(() {
-                  _selectedTicketIndex = _selectedTicketIndex == 2 ? -1 : 2;
-                });
-              },
-            ),
-          ],
-        ),
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _unassigned.length,
+            itemBuilder: (context, i) {
+              final ticket = _unassigned[i];
+              return TicketCard(
+                location: ticket.inUnitLocation,
+                roomType: ticket.inUnitLocation,
+                tag: ticket.categoryLabel,
+                tagColor: ticket.categoryTagColor,
+                tagBgColor: ticket.categoryTagBgColor,
+                title: ticket.title,
+                description: ticket.detailDesc ?? '-',
+                timeAgo: ticket.timeAgo,
+                assignedTo: ticket.assignedToId ?? '-',
+                isSelected: _selectedTicketIndex == i,
+                onTap: () {
+                  setState(() {
+                    _selectedTicketIndex = _selectedTicketIndex == i ? -1 : i;
+                  });
+                },
+              );
+            },
+          ),
       ],
     );
   }
@@ -293,19 +340,13 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                   const SizedBox(width: 8),
                   const Text(
                     "Technician Availability & Workload",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               Text(
                 "Showing active members only",
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade400,
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
               ),
             ],
           ),
@@ -334,13 +375,16 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 90), // พื้นที่ปุ่ม
+              const SizedBox(width: 90),
             ],
           ),
           const Padding(
             padding: EdgeInsets.only(top: 12, bottom: 4),
             child: Divider(height: 1),
           ),
+
+          // ── NOTE: ถ้า backend มี endpoint /users?role=technician ให้ fetch เพิ่ม ──
+          // ตอนนี้ยังใช้ข้อมูล static เพราะ backend ยังไม่มี list technicians endpoint
           const TechnicianRow(
             name: "Jane Doe",
             role: "Plumbing Technician",

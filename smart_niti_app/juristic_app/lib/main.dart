@@ -7,11 +7,10 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -23,7 +22,7 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Inter',
         scaffoldBackgroundColor: AppColors.backgroundColor,
       ),
-      initialRoute: AppRoutes.login,
+      initialRoute: '/',
       routes: AppRoutes.routes,
     );
   }
