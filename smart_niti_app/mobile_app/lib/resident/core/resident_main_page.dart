@@ -1,6 +1,6 @@
+// lib/resident/core/resident_main_page.dart
+
 import 'package:flutter/material.dart';
-import '../features/booking/booking_page.dart';
-import '../features/parcel/parcel_page.dart';
 import '../features/profile/profile_page.dart';
 import '../features/home/home_page.dart';
 import 'widgets/main_bottom_nav.dart';
@@ -16,17 +16,14 @@ class ResidentMainPage extends StatefulWidget {
 class _ResidentMainPageState extends State<ResidentMainPage> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    HomePage(),
-    BookingPage(),
-    ParcelPage(),
-    ProfilePage(),
-  ];
+  final List<Widget> _pages = const [HomePage(), ProfilePage()];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _pages),
+
+      // ── FAB: เฉพาะหน้า Home, icon +, เปิดหน้า Repair Request ──────────
       floatingActionButton: _currentIndex == 0
           ? SizedBox(
               width: 56,
@@ -36,7 +33,7 @@ class _ResidentMainPageState extends State<ResidentMainPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const RepairRequestPage(),
+                      builder: (_) => const RepairRequestPage(),
                     ),
                   );
                 },
@@ -44,17 +41,14 @@ class _ResidentMainPageState extends State<ResidentMainPage> {
                 shape: const CircleBorder(
                   side: BorderSide(color: Colors.white, width: 3),
                 ),
-                elevation: 10,
-                child: const Icon(
-                  Icons.handyman,
-                  color: Colors.white,
-                  size: 24,
-                ),
+                elevation: 6,
+                child: const Icon(Icons.add, color: Colors.white, size: 28),
               ),
             )
           : null,
 
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      // FAB ตรงกลาง
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
       bottomNavigationBar: MainBottomNav(
         currentIndex: _currentIndex,

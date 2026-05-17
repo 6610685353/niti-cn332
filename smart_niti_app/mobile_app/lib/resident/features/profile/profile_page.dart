@@ -314,18 +314,6 @@ class _ProfilePageState extends State<ProfilePage> {
             );
           },
         ),
-        const SizedBox(height: 12),
-        _buildHistoryCard(
-          Icons.calendar_today_outlined,
-          'Booking History',
-          'Meeting room reservation',
-        ),
-        const SizedBox(height: 12),
-        _buildHistoryCard(
-          Icons.account_balance_wallet_outlined,
-          'Payment History',
-          'View all rent & utility receipts',
-        ),
       ],
     );
   }

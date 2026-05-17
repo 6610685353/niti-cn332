@@ -148,7 +148,7 @@ class Step2ScheduleView extends StatelessWidget {
           runSpacing: 12,
           children: slots.map((slot) {
             bool isSelected = selectedSlot == slot;
-            bool isFull = slot == "13:00 - 15:00";
+            bool isFull = false;
 
             return GestureDetector(
               onTap: isFull
