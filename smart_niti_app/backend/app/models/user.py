@@ -28,6 +28,15 @@ class UserModel(Base):
     resident_info = relationship("ResidentModel", back_populates="user", cascade="all, delete-orphan", uselist=False)
     technician_info = relationship("TechnicianModel", back_populates="user", cascade="all, delete-orphan", uselist=False)
 
+    @property
+    def room_no(self) -> str | None:
+        return self.resident_info.room_no if self.resident_info else None
+
+    @property
+    def building(self) -> str | None:
+        return self.resident_info.building if self.resident_info else None
+
+
 class ResidentModel(Base):
     __tablename__ = "residents"
 

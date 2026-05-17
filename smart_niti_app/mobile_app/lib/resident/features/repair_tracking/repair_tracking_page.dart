@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import '../repair_history/models/repair_ticket_model.dart';
 import '../../core/app_config.dart';
@@ -248,8 +249,11 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
 
     setState(() => _isCancelling = true);
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      final token = await user?.getIdToken();
       final res = await http.patch(
         Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}/cancel'),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (!mounted) return;

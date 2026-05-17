@@ -1,107 +1,173 @@
 // lib/resident/features/profile/profile_page.dart
 
-import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import '../repair_history/repair_history_page.dart';
 import '../../core/app_config.dart';
+import '../../core/user_data_notifier.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final UserDataNotifier userNotifier;
+
+  const ProfilePage({super.key, required this.userNotifier});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  Map<String, dynamic>? _userData;
-  bool _isLoading = true;
-  String? _error;
+  bool _isUploadingImage = false;
 
-  // Firebase Auth user
   User? get _firebaseUser => FirebaseAuth.instance.currentUser;
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchUserData();
-  }
+  UserDataNotifier get _notifier => widget.userNotifier;
 
-  Future<void> _fetchUserData() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  // ---- อัพโหลดรูปโปรไฟล์ ----
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final source = await _showImageSourceDialog();
+    if (source == null) return;
+
+    final XFile? picked = await picker.pickImage(
+      source: source,
+      imageQuality: 80,
+      maxWidth: 800,
+    );
+    if (picked == null) return;
+
+    setState(() => _isUploadingImage = true);
 
     try {
-      final uid = _firebaseUser?.uid;
-      if (uid == null) {
-        setState(() {
-          _error = 'ไม่พบข้อมูล User';
-          _isLoading = false;
-        });
-        return;
-      }
+      final token = await _firebaseUser?.getIdToken();
+      if (token == null) throw Exception('ไม่พบ token');
 
-      final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/users/$uid'),
-      );
+      final uri = Uri.parse('${AppConfig.baseUrl}/users/me/avatar');
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..files.add(await http.MultipartFile.fromPath('file', picked.path));
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
 
       if (response.statusCode == 200) {
-        setState(() {
-          _userData = jsonDecode(response.body);
-          _isLoading = false;
-        });
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        // อัพเดต notifier → ทั้ง header และ profile rebuild ทันที
+        _notifier.updateImageUrl(data['image_url'] as String);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('อัพเดทรูปโปรไฟล์สำเร็จ'),
+              backgroundColor: Color(0xFF137FEC),
+            ),
+          );
+        }
       } else {
-        setState(() {
-          _error = 'โหลดข้อมูลไม่สำเร็จ';
-          _isLoading = false;
-        });
+        throw Exception('Upload failed: ${response.statusCode}');
       }
     } catch (e) {
-      setState(() {
-        // ถ้า offline ให้แสดงข้อมูลจาก Firebase แทน
-        _isLoading = false;
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('อัพโหลดรูปไม่สำเร็จ: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingImage = false);
     }
   }
 
-  String get _displayName {
-    if (_userData != null) {
-      final fn = _userData!['first_name'] ?? '';
-      final ln = _userData!['last_name'] ?? '';
-      return '$fn $ln'.trim();
-    }
-    return _firebaseUser?.displayName ?? 'User';
+  Future<ImageSource?> _showImageSourceDialog() async {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'เปลี่ยนรูปโปรไฟล์',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            _buildSourceTile(
+              ctx,
+              Icons.camera_alt_outlined,
+              'ถ่ายรูปใหม่',
+              ImageSource.camera,
+            ),
+            const SizedBox(height: 12),
+            _buildSourceTile(
+              ctx,
+              Icons.photo_library_outlined,
+              'เลือกจากคลังรูป',
+              ImageSource.gallery,
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'ยกเลิก',
+                style: TextStyle(color: Color(0xFF64748B)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  String get _email =>
-      _firebaseUser?.email ?? _userData?['email'] ?? 'ไม่มีข้อมูล';
-
-  String get _memberSince {
-    final createdAt = _userData?['created_at'];
-    if (createdAt == null) return '';
-    try {
-      final dt = DateTime.parse(createdAt);
-      const months = [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
-      ];
-      return 'Member since ${months[dt.month - 1]} ${dt.year}';
-    } catch (_) {
-      return '';
-    }
+  Widget _buildSourceTile(
+    BuildContext ctx,
+    IconData icon,
+    String label,
+    ImageSource source,
+  ) {
+    return InkWell(
+      onTap: () => Navigator.pop(ctx, source),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: const Color(0xFF137FEC), size: 22),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _handleLogout() async {
@@ -148,36 +214,49 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: _isLoading
-          ? const Center(
+      body: ListenableBuilder(
+        listenable: _notifier,
+        builder: (context, _) {
+          if (_notifier.isLoading && _notifier.userData == null) {
+            return const Center(
               child: CircularProgressIndicator(color: Color(0xFF137FEC)),
-            )
-          : RefreshIndicator(
-              onRefresh: _fetchUserData,
-              color: const Color(0xFF137FEC),
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 60),
-                    _buildProfileHeader(),
-                    const SizedBox(height: 30),
-                    _buildPersonalDetails(),
-                    const SizedBox(height: 25),
-                    _buildActivityHistory(),
-                    const SizedBox(height: 30),
-                    _buildLogoutButton(),
-                    const SizedBox(height: 48),
-                  ],
-                ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: _notifier.fetchUserData,
+            color: const Color(0xFF137FEC),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  const SizedBox(height: 60),
+                  _buildProfileHeader(),
+                  const SizedBox(height: 30),
+                  _buildPersonalDetails(),
+                  const SizedBox(height: 25),
+                  _buildActivityHistory(),
+                  const SizedBox(height: 30),
+                  _buildLogoutButton(),
+                  const SizedBox(height: 48),
+                ],
               ),
             ),
+          );
+        },
+      ),
     );
   }
 
   // ---- 1. Profile Header ----
   Widget _buildProfileHeader() {
+    final imageUrl = _notifier.imageUrl;
+    final building = _notifier.building;
+    final roomNo = _notifier.roomNo;
+    final name = _notifier.displayName;
+    final memberSince = _notifier.memberSince;
+
     return Column(
       children: [
         const Text(
@@ -186,31 +265,83 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         const SizedBox(height: 20),
 
-        // Avatar
+        // Avatar with edit button
         Stack(
           children: [
-            CircleAvatar(
-              radius: 60,
-              backgroundColor: Colors.grey.shade200,
-              backgroundImage: _userData?['image_url'] != null
-                  ? NetworkImage(_userData!['image_url'])
-                  : null,
-              child: _userData?['image_url'] == null
-                  ? const Icon(Icons.person, size: 60, color: Color(0xFF94A3B8))
-                  : null,
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFF137FEC).withOpacity(0.25),
+                  width: 3,
+                ),
+              ),
+              child: CircleAvatar(
+                radius: 57,
+                backgroundColor: Colors.grey.shade200,
+                backgroundImage: imageUrl != null
+                    ? NetworkImage('${AppConfig.baseUrl}$imageUrl')
+                    : null,
+                child: imageUrl == null
+                    ? const Icon(
+                        Icons.person,
+                        size: 60,
+                        color: Color(0xFF94A3B8),
+                      )
+                    : null,
+              ),
             ),
+
+            // Loading overlay ขณะอัพโหลด
+            if (_isUploadingImage)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black.withOpacity(0.4),
+                  ),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // ปุ่ม edit
             Positioned(
-              bottom: 0,
-              right: 5,
+              bottom: 2,
+              right: 2,
               child: GestureDetector(
-                onTap: () {},
+                onTap: _isUploadingImage ? null : _pickAndUploadImage,
                 child: Container(
                   padding: const EdgeInsets.all(7),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF137FEC),
+                  decoration: BoxDecoration(
+                    color: _isUploadingImage
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF137FEC),
                     shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF137FEC).withOpacity(0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: const Icon(Icons.edit, color: Colors.white, size: 16),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                    size: 16,
+                  ),
                 ),
               ),
             ),
@@ -220,7 +351,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
         // Name
         Text(
-          _displayName.isEmpty ? 'Loading...' : _displayName,
+          name.isEmpty ? 'Loading...' : name,
           style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w800,
@@ -229,27 +360,44 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         const SizedBox(height: 8),
 
-        // Badges
+        // ── Badges: ตึก + เลขห้อง จากข้อมูลจริง ────────────────────────
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildBadge(
-              'Unit 402B',
-              const Color(0xFFDBEAFE),
-              const Color(0xFF137FEC),
-            ),
-            const SizedBox(width: 8),
-            _buildBadge(
-              'Verified',
-              const Color(0xFFFEE2E2),
-              const Color(0xFFEF4444),
-            ),
+            // Badge ตึก (building)
+            if (building != null && building.isNotEmpty)
+              _buildBadge(
+                'Building $building',
+                const Color(0xFFDBEAFE),
+                const Color(0xFF137FEC),
+              ),
+            if (building != null &&
+                building.isNotEmpty &&
+                roomNo != null &&
+                roomNo.isNotEmpty)
+              const SizedBox(width: 8),
+            // Badge เลขห้อง (room_no)
+            if (roomNo != null && roomNo.isNotEmpty)
+              _buildBadge(
+                'Room $roomNo',
+                const Color(0xFFDCFCE7),
+                const Color(0xFF16A34A),
+              ),
+            // Fallback ถ้ายังไม่มีข้อมูล
+            if ((building == null || building.isEmpty) &&
+                (roomNo == null || roomNo.isEmpty))
+              _buildBadge(
+                'Resident',
+                const Color(0xFFDBEAFE),
+                const Color(0xFF137FEC),
+              ),
           ],
         ),
-        if (_memberSince.isNotEmpty) ...[
+
+        if (memberSince.isNotEmpty) ...[
           const SizedBox(height: 10),
           Text(
-            _memberSince,
+            memberSince,
             style: const TextStyle(color: Color(0xFF4C739A), fontSize: 14),
           ),
         ],
@@ -259,6 +407,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // ---- 2. Personal Details ----
   Widget _buildPersonalDetails() {
+    final email =
+        _firebaseUser?.email ?? _notifier.userData?['email'] ?? 'ไม่มีข้อมูล';
+    final phone = _firebaseUser?.phoneNumber ?? '(+66) 00-000-0000';
+    final role = _notifier.role;
+    final building = _notifier.building;
+    final roomNo = _notifier.roomNo;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -271,19 +426,32 @@ class _ProfilePageState extends State<ProfilePage> {
           decoration: _cardDecoration(),
           child: Column(
             children: [
-              _buildListTile(Icons.email_outlined, 'Email', _email),
+              _buildListTile(Icons.email_outlined, 'Email', email),
               const Divider(height: 1, indent: 70),
               _buildListTile(
                 Icons.phone_android_outlined,
                 'Phone Number',
-                _firebaseUser?.phoneNumber ?? '(+66) 00-000-0000',
+                phone,
               ),
-              if (_userData?['role'] != null) ...[
+              if (role != null) ...[
                 const Divider(height: 1, indent: 70),
                 _buildListTile(
                   Icons.badge_outlined,
                   'Role',
-                  (_userData!['role'] as String).toUpperCase(),
+                  role.toUpperCase(),
+                ),
+              ],
+              // แสดงตึก + ห้องใน personal details ด้วย
+              if (building != null && building.isNotEmpty) ...[
+                const Divider(height: 1, indent: 70),
+                _buildListTile(Icons.apartment_outlined, 'Building', building),
+              ],
+              if (roomNo != null && roomNo.isNotEmpty) ...[
+                const Divider(height: 1, indent: 70),
+                _buildListTile(
+                  Icons.door_front_door_outlined,
+                  'Room No.',
+                  roomNo,
                 ),
               ],
             ],

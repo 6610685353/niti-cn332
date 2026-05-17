@@ -1,10 +1,13 @@
 // lib/resident/core/resident_main_page.dart
 
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../features/profile/profile_page.dart';
 import '../features/home/home_page.dart';
 import 'widgets/main_bottom_nav.dart';
 import '../features/repair_request/repair_request_page.dart';
+import 'user_data_notifier.dart';
 
 class ResidentMainPage extends StatefulWidget {
   const ResidentMainPage({super.key});
@@ -16,14 +19,44 @@ class ResidentMainPage extends StatefulWidget {
 class _ResidentMainPageState extends State<ResidentMainPage> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [HomePage(), ProfilePage()];
+  // Notifier เดียวที่แชร์ระหว่าง HomePage และ ProfilePage
+  final _userNotifier = UserDataNotifier();
+
+  StreamSubscription<User?>? _authSub;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Fetch ครั้งแรกทันที
+    _userNotifier.fetchUserData();
+
+    // Re-fetch ทุกครั้งที่ Firebase auth state เปลี่ยน
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        _userNotifier.fetchUserData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    _userNotifier.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _pages),
+    final pages = [
+      HomePage(userNotifier: _userNotifier),
+      ProfilePage(userNotifier: _userNotifier),
+    ];
 
-      // ── FAB: เฉพาะหน้า Home, icon +, เปิดหน้า Repair Request ──────────
+    return Scaffold(
+      body: IndexedStack(index: _currentIndex, children: pages),
+
+      // ── FAB: เฉพาะหน้า Home ─────────────────────────────────────────────
       floatingActionButton: _currentIndex == 0
           ? SizedBox(
               width: 56,
@@ -47,16 +80,11 @@ class _ResidentMainPageState extends State<ResidentMainPage> {
             )
           : null,
 
-      // FAB ตรงกลาง
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
       bottomNavigationBar: MainBottomNav(
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onTap: (index) => setState(() => _currentIndex = index),
       ),
     );
   }

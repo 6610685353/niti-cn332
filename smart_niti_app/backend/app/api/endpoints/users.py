@@ -1,15 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from database import get_db
 from models import user as models_user
 from schemas import user as schemas_user
 from firebase_admin import auth
 from auth import get_current_user
+import os
+import uuid
+import shutil
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"]
 )
+
+AVATAR_DIR = "static/avatars"
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
 @router.post("/")
 def create_user(
@@ -140,3 +147,55 @@ def update_user_by_admin(uid: str, admin_update: schemas_user.AdminUserUpdate, d
     db.commit()
     db.refresh(db_user)
     return db_user
+
+@router.post("/me/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """อัพโหลดรูปโปรไฟล์ — บันทึกที่ static/avatars/<uid>.<ext>"""
+
+    # ตรวจสอบ extension
+    _, ext = os.path.splitext(file.filename or "")
+    ext = ext.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"ไม่รองรับนามสกุลไฟล์ {ext} — ใช้ได้เฉพาะ jpg, jpeg, png, webp",
+        )
+
+    # อ่านและตรวจขนาด
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="ไฟล์ใหญ่เกิน 5 MB")
+
+    # หา user ใน DB
+    db_user = (
+        db.query(models_user.UserModel)
+        .filter(models_user.UserModel.uid == current_user.uid)
+        .first()
+    )
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # ลบรูปเก่าถ้ามี
+    if db_user.image_url:
+        old_path = db_user.image_url.lstrip("/")
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    # บันทึกไฟล์ใหม่ (ตั้งชื่อตาม uid เพื่อ overwrite ได้เสมอ)
+    os.makedirs(AVATAR_DIR, exist_ok=True)
+    filename = f"{current_user.uid}{ext}"
+    file_path = os.path.join(AVATAR_DIR, filename)
+
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    # อัพเดต DB
+    image_url = f"/static/avatars/{filename}"
+    db_user.image_url = image_url
+    db.commit()
+
+    return {"image_url": image_url}

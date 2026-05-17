@@ -17,8 +17,6 @@ router = APIRouter(prefix="/tickets", tags=["Tickets"]
 IMAGE_DIR = "static/ticket_images"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
-# ── Ticket CRUD ───────────────────────────────────────────────────────────────
-
 @router.post("/", response_model=schemas_ticket.TicketResponse)
 def create_ticket(ticket: schemas_ticket.TicketCreate, db: Session = Depends(get_db)):
     db_ticket = models_ticket.TicketModel(**ticket.model_dump())
@@ -95,7 +93,7 @@ async def update_ticket_status(
 def cancel_ticket(
     ticket_id: int, 
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user) # ดึงข้อมูลผู้ใช้งานปัจจุบัน
+    current_user = Depends(get_current_user)
 ):
     if current_user.role != models_user.UserRole.resident:
         raise HTTPException(status_code=403, detail="เฉพาะ Resident เท่านั้นที่สามารถยกเลิก Ticket ได้")
@@ -193,13 +191,11 @@ def delete_ticket_image(ticket_id: int, image_id: int, db: Session = Depends(get
     db.delete(image)
     db.commit()
 
-@router.get("/{ticket_id}/rating", response_model=schemas_ticket.RatingResponse)
+@router.get("/{ticket_id}/rating", response_model=Optional[schemas_ticket.RatingResponse])
 def get_ticket_rating(ticket_id: int, db: Session = Depends(get_db)):
     rating = db.query(models_ticket.RatingModel).filter(
         models_ticket.RatingModel.ticket_id == ticket_id
     ).first()
-    if not rating:
-        raise HTTPException(status_code=404, detail="ยังไม่มีการให้คะแนน")
     return rating
 
 @router.post("/{ticket_id}/rating", response_model=schemas_ticket.RatingResponse)

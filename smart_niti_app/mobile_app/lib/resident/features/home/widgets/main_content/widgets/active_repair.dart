@@ -81,11 +81,17 @@ class _ActiveRepairState extends State<ActiveRepair> {
         return;
       }
 
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (token == null) return;
+
       final uri = Uri.parse(
         '${AppConfig.baseUrl}/tickets/',
       ).replace(queryParameters: {'req_user_id': uid});
 
-      final res = await http.get(uri);
+      final res = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
       if (_streamController.isClosed) return;
       if (res.statusCode != 200) return;
 
@@ -117,8 +123,10 @@ class _ActiveRepairState extends State<ActiveRepair> {
   Future<String?> _fetchTechName(String techId) async {
     if (_techNameCache.containsKey(techId)) return _techNameCache[techId];
     try {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
       final res = await http.get(
         Uri.parse('${AppConfig.baseUrl}/users/$techId'),
+        headers: {'Authorization': 'Bearer $token'},
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;

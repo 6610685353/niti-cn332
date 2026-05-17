@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import '../repair_history/repair_history_page.dart';
 import 'widgets/home_header.dart';
 import 'widgets/main_content/widgets/active_repair.dart';
+import '../../core/user_data_notifier.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  final UserDataNotifier userNotifier;
+
+  const HomePage({super.key, required this.userNotifier});
 
   @override
   Widget build(BuildContext context) {
@@ -15,12 +18,19 @@ class HomePage extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header: profile pic + name + notification ──────────────────
-          HomeHeader(
-            hasNotification: true,
-            onNotificationTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notification clicked')),
+          // ── Header: realtime จาก userNotifier ─────────────────────────
+          ListenableBuilder(
+            listenable: userNotifier,
+            builder: (context, _) {
+              return HomeHeader(
+                hasNotification: true,
+                userName: userNotifier.displayName,
+                userImageUrl: userNotifier.imageUrl,
+                onNotificationTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Notification clicked')),
+                  );
+                },
               );
             },
           ),

@@ -47,10 +47,14 @@ class _RepairHistoryPageState extends State<RepairHistoryPage> {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
 
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (token == null) return;
+      final authHeaders = {'Authorization': 'Bearer $token'};
+
       final uri = Uri.parse(
         '${AppConfig.baseUrl}/tickets/',
       ).replace(queryParameters: {'req_user_id': uid});
-      final ticketRes = await http.get(uri);
+      final ticketRes = await http.get(uri, headers: authHeaders);
       if (ticketRes.statusCode != 200) return;
 
       final tickets = (jsonDecode(ticketRes.body) as List)
@@ -64,6 +68,7 @@ class _RepairHistoryPageState extends State<RepairHistoryPage> {
           try {
             final res = await http.get(
               Uri.parse('${AppConfig.baseUrl}/tickets/${t.id}/rating'),
+              headers: authHeaders,
             );
             final score = res.statusCode == 200
                 ? (jsonDecode(res.body)['score'] as int?)
