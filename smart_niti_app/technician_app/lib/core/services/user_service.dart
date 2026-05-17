@@ -37,26 +37,6 @@ class UserService {
     return UserModel.fromJson(data);
   }
 
-  /// เช็คว่า email นี้มีในระบบแล้วหรือยัง → GET /users/check-email?email=...
-  /// คืนค่า true = มีซ้ำในระบบ, false = ใช้ได้
-  static Future<bool> checkEmailExists(String email) async {
-    final response = await ApiService.get(
-      '/users/check-email?email=${Uri.encodeQueryComponent(email)}',
-    );
-    final data = ApiService.handleResponse(response) as Map<String, dynamic>;
-    return data['exists'] == true;
-  }
-
-  /// อัปเดต email ของตัวเองใน backend → PATCH /users/me
-  static Future<UserModel> updateMyEmail(String email) async {
-    final response = await ApiService.patch(
-      '/users/me',
-      body: {'email': email},
-    );
-    final data = ApiService.handleResponse(response) as Map<String, dynamic>;
-    return UserModel.fromJson(data);
-  }
-
   /// อัปโหลดรูปโปรไฟล์ไปยัง backend → PATCH /users/me/avatar
   static Future<UserModel> uploadAvatar(
     List<int> bytes,
