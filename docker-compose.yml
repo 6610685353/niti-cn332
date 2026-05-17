@@ -13,13 +13,3 @@ services:
     env_file:
       - .env
     restart: always
-    networks:
-      - smartniti_net
-
-networks:
-  smartniti_net:
-    enable_ipv6: true
-    ipam:
-      config:
-        - subnet: 172.16.238.0/24
-        - subnet: fd00:1::/64
