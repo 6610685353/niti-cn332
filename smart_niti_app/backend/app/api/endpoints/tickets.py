@@ -270,6 +270,39 @@ def assign_ticket(
     db.refresh(ticket)
     return ticket
 
+@router.patch("/{ticket_id}/unassign", response_model=schemas_ticket.TicketResponse)
+def unassign_ticket(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    if current_user.role != models_user.UserRole.juristic:
+        raise HTTPException(status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถยกเลิกการมอบหมายงานได้")
+
+    ticket = db.query(models_ticket.TicketModel).filter(
+        models_ticket.TicketModel.id == ticket_id
+    ).first()
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    allowed_statuses = [
+        models_ticket.TicketStatus.submitted,
+        models_ticket.TicketStatus.assigned
+    ]
+    if ticket.status not in allowed_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"ไม่สามารถ Unassign ได้ เนื่องจาก Ticket อยู่ในสถานะ '{ticket.status}'"
+        )
+
+    ticket.assigned_to_id = None
+    ticket.assigned_by_id = None
+    ticket.status = models_ticket.TicketStatus.submitted
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
 @router.websocket("/ws/juristic")
 async def websocket_juristic(websocket: WebSocket):
     await manager.connect(websocket)

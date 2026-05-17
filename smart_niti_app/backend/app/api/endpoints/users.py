@@ -5,6 +5,8 @@ from models import user as models_user
 from schemas import user as schemas_user
 from firebase_admin import auth
 from auth import get_current_user
+from typing import Optional, List
+from fastapi import Query
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -142,6 +144,21 @@ def update_my_profile_patch(
     db.refresh(db_user)
     return db_user
 
+@router.get("/", response_model=List[schemas_user.UserResponse])
+def list_users(
+    role: Optional[str] = Query(None, description="filter by role e.g. technician"),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    if current_user.role != models_user.UserRole.juristic:
+        raise HTTPException(status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถดูรายชื่อผู้ใช้งานได้")
+
+    query = db.query(models_user.UserModel)
+    
+    if role:
+        query = query.filter(models_user.UserModel.role == role)
+        
+    return query.all()
 
 @router.get("/{uid}", response_model=schemas_user.UserResponse)
 def get_user(uid: str, db: Session = Depends(get_db)):
