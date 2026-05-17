@@ -6,7 +6,6 @@ import '../../core/services/user_service.dart';
 import '../../core/services/api_service.dart';
 import '../../profile/models/user_model.dart';
 import '../../profile/widgets/profile_widgets.dart';
-import './update_email_screen.dart';
 import '../../work_order/screens/repair_history_screen.dart';
 import '../../technician/technician_facade.dart';
 import '../../login/screens/login.dart';
@@ -322,21 +321,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   endIndent: 20,
                   color: Colors.grey.shade100,
                 ),
-                // Email อยู่ล่าง มี chevron (กดเพื่อแก้ไข)
+                // Email แสดงแบบดูอย่างเดียว
                 ProfileInfoTile(
                   icon: Icons.mail_outline_rounded,
                   iconBgColor: const Color(0xFF1677FF),
                   title: 'Email',
                   value: displayEmail,
-                  onTap: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const UpdateEmailScreen(),
-                      ),
-                    );
-                    if (result == true) _loadProfile();
-                  },
+                  onTap: () {},
+                  showChevron: false,
                 ),
               ]),
 
