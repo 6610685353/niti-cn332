@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart'; // 👈 1. อย่าลืม import firebase_auth
 
 /// เปลี่ยน baseUrl ให้ตรงกับ IP/port ที่ backend รัน
 /// เช่น ถ้ารันบนเครื่องเดียวกัน ใช้ http://localhost:8000
@@ -14,10 +15,24 @@ class ApiService {
 
   final http.Client _client = http.Client();
 
-  Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
+  // 👈 2. เปลี่ยนจาก Map ธรรมดา เป็น Future function เพื่อให้ดึง Token ได้
+  Future<Map<String, String>> _getHeaders() async {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+
+    // ดึงผู้ใช้ปัจจุบันและขอ Token
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final token = await user.getIdToken();
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token'; // แนบ Token ไปกับ Header
+      }
+    }
+
+    return headers;
+  }
 
   // ─── Tickets ───────────────────────────────────────────────────
 
@@ -26,7 +41,8 @@ class ApiService {
     final uri = Uri.parse('$kBaseUrl/tickets/').replace(
       queryParameters: reqUserId != null ? {'req_user_id': reqUserId} : null,
     );
-    final res = await _client.get(uri, headers: _headers);
+    final headers = await _getHeaders(); // 👈 3. เรียกใช้ Header ใหม่
+    final res = await _client.get(uri, headers: headers);
     _checkStatus(res);
     final List<dynamic> data = jsonDecode(res.body);
     return data.cast<Map<String, dynamic>>();
@@ -34,9 +50,10 @@ class ApiService {
 
   /// ดึง ticket เดี่ยวตาม id
   Future<Map<String, dynamic>> getTicket(int ticketId) async {
+    final headers = await _getHeaders();
     final res = await _client.get(
       Uri.parse('$kBaseUrl/tickets/$ticketId'),
-      headers: _headers,
+      headers: headers,
     );
     _checkStatus(res);
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -47,9 +64,10 @@ class ApiService {
     int ticketId,
     String status,
   ) async {
+    final headers = await _getHeaders();
     final res = await _client.patch(
       Uri.parse('$kBaseUrl/tickets/$ticketId/status?status=$status'),
-      headers: _headers,
+      headers: headers,
     );
     _checkStatus(res);
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -57,9 +75,10 @@ class ApiService {
 
   /// ยกเลิก ticket
   Future<Map<String, dynamic>> cancelTicket(int ticketId) async {
+    final headers = await _getHeaders();
     final res = await _client.patch(
       Uri.parse('$kBaseUrl/tickets/$ticketId/cancel'),
-      headers: _headers,
+      headers: headers,
     );
     _checkStatus(res);
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -69,9 +88,10 @@ class ApiService {
 
   /// ดึงข้อมูล user ตาม uid
   Future<Map<String, dynamic>> getUser(String uid) async {
+    final headers = await _getHeaders();
     final res = await _client.get(
       Uri.parse('$kBaseUrl/users/$uid'),
-      headers: _headers,
+      headers: headers,
     );
     _checkStatus(res);
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -82,7 +102,9 @@ class ApiService {
     final uri = Uri.parse(
       '$kBaseUrl/users/',
     ).replace(queryParameters: {'role': 'technician'});
-    final res = await _client.get(uri, headers: _headers);
+
+    final headers = await _getHeaders();
+    final res = await _client.get(uri, headers: headers);
     _checkStatus(res);
     final List<dynamic> data = jsonDecode(res.body);
     return data.cast<Map<String, dynamic>>();
@@ -93,9 +115,10 @@ class ApiService {
     int ticketId,
     String technicianId,
   ) async {
+    final headers = await _getHeaders();
     final res = await _client.patch(
       Uri.parse('$kBaseUrl/tickets/$ticketId/assign'),
-      headers: _headers,
+      headers: headers,
       body: jsonEncode({'technician_id': technicianId}),
     );
     _checkStatus(res);
@@ -104,9 +127,10 @@ class ApiService {
 
   /// unassign ticket
   Future<Map<String, dynamic>> unassignTicket(int ticketId) async {
+    final headers = await _getHeaders();
     final res = await _client.patch(
       Uri.parse('$kBaseUrl/tickets/$ticketId/unassign'),
-      headers: _headers,
+      headers: headers,
     );
     _checkStatus(res);
     return jsonDecode(res.body) as Map<String, dynamic>;

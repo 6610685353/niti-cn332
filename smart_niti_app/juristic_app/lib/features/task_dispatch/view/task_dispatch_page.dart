@@ -347,7 +347,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
             ),
           )
         else
-          // แสดง hint ให้ user รู้ว่าต้องกดเลือก ticket ก่อน
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -378,7 +377,9 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     title: ticket.title,
                     description: ticket.detailDesc ?? '-',
                     timeAgo: ticket.timeAgo,
-                    assignedTo: ticket.assignedToId ?? '-',
+                    assignedTo:
+                        ticket.assignedToId?.toString() ??
+                        '-', // 👈 แปลงป้องกัน Error
                     isSelected: _selectedTicketId == ticket.id,
                     onTap: () {
                       setState(() {
@@ -440,7 +441,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                 ],
               ),
               Text(
-                "กด Unassign เพื่อยกเลิกการมอบหมาย",
+                "กด Unassign ที่การ์ดเพื่อยกเลิก", // แก้ไขคำใบ้นิดหน่อย
                 style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
               ),
             ],
@@ -453,63 +454,32 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
           itemCount: _assigned.length,
           itemBuilder: (context, i) {
             final ticket = _assigned[i];
-            // หาชื่อช่างจาก _technicians list
-            final techMap = _technicians.where(
-              (t) => t['uid'] == ticket.assignedToId,
-            );
-            final techName = techMap.isNotEmpty
-                ? '${techMap.first['first_name']} ${techMap.first['last_name']}'
-                : ticket.assignedToId ?? '-';
 
-            return Stack(
-              children: [
-                TicketCard(
-                  location: ticket.inUnitLocation,
-                  roomType: ticket.inUnitLocation,
-                  tag: ticket.categoryLabel,
-                  tagColor: ticket.categoryTagColor,
-                  tagBgColor: ticket.categoryTagBgColor,
-                  title: ticket.title,
-                  description: ticket.detailDesc ?? '-',
-                  timeAgo: ticket.timeAgo,
-                  assignedTo: techName,
-                  isSelected: false,
-                  onTap: null,
-                ),
-                // ปุ่ม Unassign ลอยมุมขวาบน
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: TextButton.icon(
-                    onPressed: () => _unassignTicket(ticket.id),
-                    icon: const Icon(
-                      Icons.person_remove,
-                      size: 14,
-                      color: AppColors.errorRed,
-                    ),
-                    label: const Text(
-                      "Unassign",
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.errorRed,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: TextButton.styleFrom(
-                      backgroundColor: AppColors.errorRed.withOpacity(0.08),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            final ticketTechId = ticket.assignedToId?.toString();
+            final techMap = _technicians.where(
+              (t) => t['uid']?.toString() == ticketTechId,
+            );
+
+            final techName = techMap.isNotEmpty
+                ? '${techMap.first['first_name'] ?? ''} ${techMap.first['last_name'] ?? ''}'
+                      .trim()
+                : ticketTechId ?? '-';
+
+            // 🌟 ไม่ต้องใช้ Stack แล้ว เรียกใช้งาน TicketCard ตัวเดียวจบเลย!
+            return TicketCard(
+              location: ticket.inUnitLocation,
+              roomType: ticket.inUnitLocation,
+              tag: ticket.categoryLabel,
+              tagColor: ticket.categoryTagColor,
+              tagBgColor: ticket.categoryTagBgColor,
+              title: ticket.title,
+              description: ticket.detailDesc ?? '-',
+              timeAgo: ticket.timeAgo,
+              assignedTo: techName,
+              isSelected: false,
+              onTap: null,
+              onUnassign: () =>
+                  _unassignTicket(ticket.id), // 👈 โยนคำสั่งเข้าไปตรงนี้
             );
           },
         ),
@@ -549,7 +519,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                   ),
                   const SizedBox(width: 8),
                   const Text(
-                    "Technician Availability & Workload",
+                    "Technician Availability",
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -557,7 +527,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
               Text(
                 _selectedTicketId != null
                     ? "เลือกช่างเพื่อ Assign"
-                    : "Showing active members only",
+                    : "Active members",
                 style: TextStyle(
                   fontSize: 12,
                   color: _selectedTicketId != null
@@ -615,18 +585,18 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
             )
           else
             ...(_technicians.map((tech) {
-              final techId = tech['uid'] as String;
+              // 👈 ใช้ ?.toString() แทน as String เพื่อป้องกันแอปพังถ้า UID มาเป็นตัวเลข
+              final techId = tech['uid']?.toString() ?? '';
               final name =
                   '${tech['first_name'] ?? ''} ${tech['last_name'] ?? ''}'
                       .trim();
-              final role = (tech['role'] as String? ?? 'technician');
+              final role = (tech['role']?.toString() ?? 'technician');
 
-              // นับ workload จาก assigned tickets ของช่างคนนี้
+              // 👈 นับ workload ให้ถูกต้อง โดยแปลงค่าเป็น String ก่อนเทียบ
               final workload = _assigned
-                  .where((t) => t.assignedToId == techId)
+                  .where((t) => t.assignedToId?.toString() == techId)
                   .length;
 
-              // กำหนดสีตาม role
               Color roleColor;
               switch (role) {
                 case 'technician':
@@ -641,7 +611,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                   TechnicianRow(
                     name: name,
                     role: role,
-                    currentTasks: workload,
+                    currentTasks: workload, // ส่ง Workload ไปโชว์ให้ถูกต้อง
                     roleColor: roleColor,
                     isAssignEnabled: _selectedTicketId != null,
                     onAssign: _selectedTicketId != null

@@ -5,9 +5,10 @@ class TicketCard extends StatelessWidget {
   final String location, roomType, tag, title, description, timeAgo, assignedTo;
   final Color tagColor, tagBgColor;
 
-  // 🌟 เพิ่ม 2 ตัวนี้เข้ามาเพื่อให้กดเลือกได้
   final bool isSelected;
   final VoidCallback? onTap;
+  // 🌟 เพิ่มฟังก์ชัน onUnassign สำหรับรับคำสั่งยกเลิกงาน
+  final VoidCallback? onUnassign;
 
   const TicketCard({
     super.key,
@@ -20,22 +21,21 @@ class TicketCard extends StatelessWidget {
     required this.description,
     required this.timeAgo,
     required this.assignedTo,
-    this.isSelected = false, // ค่าเริ่มต้นคือไม่ได้ถูกเลือก
+    this.isSelected = false,
     this.onTap,
+    this.onUnassign, // 👈 อย่าลืมรับค่าตรงนี้
   });
 
   @override
   Widget build(BuildContext context) {
     bool isUnassigned = assignedTo == "-";
 
-    // 🌟 ใช้ GestureDetector หรือ InkWell ครอบเพื่อให้กดได้
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          // ถ้าถูกเลือก ให้พื้นหลังเป็นสีฟ้าอ่อนๆ และขอบเป็นสีน้ำเงินหนา 2px
           color: isSelected
               ? AppColors.primaryBlue.withOpacity(0.05)
               : Colors.white,
@@ -138,36 +138,79 @@ class TicketCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
+            // 🌟 ปรับปรุงส่วนล่างสุดของ Card ให้รองรับปุ่ม Unassign ได้แบบไม่ซ้อนทับ
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      "Assigned Technician: ",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isUnassigned
-                            ? AppColors.errorRed
-                            : AppColors.successGreen,
-                        fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        "Assigned Technician: ",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isUnassigned
+                              ? AppColors.errorRed
+                              : AppColors.successGreen,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    Text(
-                      assignedTo,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isUnassigned
-                            ? AppColors.errorRed
-                            : AppColors.successGreen,
+                      Text(
+                        assignedTo,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isUnassigned
+                              ? AppColors.errorRed
+                              : AppColors.successGreen,
+                        ),
                       ),
-                    ),
-                  ],
+                      // 🌟 ถ้ามีการส่งฟังก์ชัน onUnassign มา ให้โชว์ปุ่มนี้ต่อท้ายชื่อช่าง
+                      if (onUnassign != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0, top: 4.0),
+                          child: InkWell(
+                            onTap: onUnassign,
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.errorRed.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(
+                                    Icons.person_remove,
+                                    size: 12,
+                                    color: AppColors.errorRed,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    "Unassign",
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.errorRed,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
                 IconButton(
                   onPressed: () {
-                    // 🌟 กดปุ่มรูปภาพเพื่อดูรายละเอียดเพิ่มเติม (เช่น รูปภาพของปัญหา)
+                    // กดปุ่มรูปภาพเพื่อดูรายละเอียดเพิ่มเติม
                   },
                   icon: const Icon(
                     Icons.image,
