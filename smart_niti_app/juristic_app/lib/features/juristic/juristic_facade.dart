@@ -12,6 +12,21 @@ class JuristicFacade {
   Future<User?> login(AuthAdapter adapter) => adapter.login();
   Future<void> logout() => _auth.signOut();
 
+  /// ดึงรายชื่อช่างทั้งหมด
+  Future<List<Map<String, dynamic>>> getTechnicians() => _api.getTechnicians();
+
+  /// assign ticket ให้ช่าง
+  Future<TicketModel> assignTicket(int ticketId, String technicianId) async {
+    final raw = await _api.assignTicket(ticketId, technicianId);
+    return TicketModel.fromJson(raw);
+  }
+
+  /// unassign ticket
+  Future<TicketModel> unassignTicket(int ticketId) async {
+    final raw = await _api.unassignTicket(ticketId);
+    return TicketModel.fromJson(raw);
+  }
+
   // ─── Tickets ────────────────────────────────────────────────────
 
   /// ดึง ticket ทั้งหมด

@@ -17,9 +17,10 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
   final _facade = JuristicFacade();
 
   List<TicketModel> _tickets = [];
+  List<Map<String, dynamic>> _technicians = [];
   bool _loading = true;
   String? _error;
-  int _selectedTicketIndex = -1;
+  int? _selectedTicketId;
 
   @override
   void initState() {
@@ -31,12 +32,16 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
     setState(() {
       _loading = true;
       _error = null;
-      _selectedTicketIndex = -1;
+      _selectedTicketId = null;
     });
     try {
-      final tickets = await _facade.getTickets();
+      final results = await Future.wait([
+        _facade.getTickets(),
+        _facade.getTechnicians(),
+      ]);
       setState(() {
-        _tickets = tickets;
+        _tickets = results[0] as List<TicketModel>;
+        _technicians = results[1] as List<Map<String, dynamic>>;
         _loading = false;
       });
     } catch (e) {
@@ -60,6 +65,51 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
 
   List<TicketModel> get _done =>
       _tickets.where((t) => t.status == TicketStatus.done).toList();
+
+  // ─── actions ──────────────────────────────────────────────────
+
+  Future<void> _assignTicket(int ticketId, String technicianId) async {
+    try {
+      await _facade.assignTicket(ticketId, technicianId);
+      setState(() => _selectedTicketId = null);
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('มอบหมายงานสำเร็จ'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _unassignTicket(int ticketId) async {
+    try {
+      await _facade.unassignTicket(ticketId);
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ยกเลิกการมอบหมายสำเร็จ'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
 
   // ─── build ────────────────────────────────────────────────────
 
@@ -98,8 +148,8 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
 
         return GestureDetector(
           onTap: () {
-            if (_selectedTicketIndex != -1) {
-              setState(() => _selectedTicketIndex = -1);
+            if (_selectedTicketId != null) {
+              setState(() => _selectedTicketId = null);
             }
           },
           behavior: HitTestBehavior.opaque,
@@ -122,7 +172,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     spacing: 16,
                     runSpacing: 16,
                     children: [
-                      // เอา Expanded ที่คลุมตรงนี้ออกไปแล้ว
                       _buildStatCard(
                         "Total Pending Request",
                         "${_unassigned.length}",
@@ -163,13 +212,24 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                           children: [
                             _buildUnassignedTickets(),
                             const SizedBox(height: 24),
+                            _buildAssignedTickets(),
+                            const SizedBox(height: 24),
                             _buildTechnicianAvailability(),
                           ],
                         )
                       : Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(flex: 4, child: _buildUnassignedTickets()),
+                            Expanded(
+                              flex: 4,
+                              child: Column(
+                                children: [
+                                  _buildUnassignedTickets(),
+                                  const SizedBox(height: 24),
+                                  _buildAssignedTickets(),
+                                ],
+                              ),
+                            ),
                             const SizedBox(width: 24),
                             Expanded(
                               flex: 5,
@@ -202,13 +262,11 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
     } else if (maxWidth < 1200) {
       cardWidth = ((maxWidth - 64 - 32) / 3).floorToDouble();
     } else {
-      // ใช้ .floorToDouble() ปัดเศษลงเพื่อป้องกันปัญหาเบราว์เซอร์คำนวณจุดทศนิยมเกินจนกล่องตกบรรทัด
       cardWidth = ((maxWidth - 64 - 48) / 4).floorToDouble();
     }
 
     return SizedBox(
       width: cardWidth,
-      // สิ่งสำคัญ!: ห้ามมีบรรทัด height: 100, เด็ดขาด เพื่อแก้บั๊กล้น 7 pixels
       child: MiniStatCard(
         title: title,
         value: value,
@@ -218,6 +276,8 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
       ),
     );
   }
+
+  // ── Unassigned Tickets ───────────────────────────────────────
 
   Widget _buildUnassignedTickets() {
     return Column(
@@ -258,7 +318,14 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                   ),
                 ],
               ),
-              Icon(Icons.refresh, color: Colors.grey.shade400, size: 20),
+              GestureDetector(
+                onTap: _loadData,
+                child: Icon(
+                  Icons.refresh,
+                  color: Colors.grey.shade400,
+                  size: 20,
+                ),
+              ),
             ],
           ),
         ),
@@ -280,34 +347,177 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
             ),
           )
         else
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _unassigned.length,
-            itemBuilder: (context, i) {
-              final ticket = _unassigned[i];
-              return TicketCard(
-                location: ticket.inUnitLocation,
-                roomType: ticket.inUnitLocation,
-                tag: ticket.categoryLabel,
-                tagColor: ticket.categoryTagColor,
-                tagBgColor: ticket.categoryTagBgColor,
-                title: ticket.title,
-                description: ticket.detailDesc ?? '-',
-                timeAgo: ticket.timeAgo,
-                assignedTo: ticket.assignedToId ?? '-',
-                isSelected: _selectedTicketIndex == i,
-                onTap: () {
-                  setState(() {
-                    _selectedTicketIndex = _selectedTicketIndex == i ? -1 : i;
-                  });
+          // แสดง hint ให้ user รู้ว่าต้องกดเลือก ticket ก่อน
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_selectedTicketId == null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    "กดเลือก Ticket เพื่อมอบหมายให้ช่าง",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _unassigned.length,
+                itemBuilder: (context, i) {
+                  final ticket = _unassigned[i];
+                  return TicketCard(
+                    location: ticket.inUnitLocation,
+                    roomType: ticket.inUnitLocation,
+                    tag: ticket.categoryLabel,
+                    tagColor: ticket.categoryTagColor,
+                    tagBgColor: ticket.categoryTagBgColor,
+                    title: ticket.title,
+                    description: ticket.detailDesc ?? '-',
+                    timeAgo: ticket.timeAgo,
+                    assignedTo: ticket.assignedToId ?? '-',
+                    isSelected: _selectedTicketId == ticket.id,
+                    onTap: () {
+                      setState(() {
+                        _selectedTicketId = _selectedTicketId == ticket.id
+                            ? null
+                            : ticket.id;
+                      });
+                    },
+                  );
                 },
-              );
-            },
+              ),
+            ],
           ),
       ],
     );
   }
+
+  // ── Assigned Tickets (มีปุ่ม Unassign) ──────────────────────
+
+  Widget _buildAssignedTickets() {
+    if (_assigned.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.warningOrange,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Icon(
+                      Icons.assignment_ind,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    "Assigned Tickets (${_assigned.length})",
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                "กด Unassign เพื่อยกเลิกการมอบหมาย",
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _assigned.length,
+          itemBuilder: (context, i) {
+            final ticket = _assigned[i];
+            // หาชื่อช่างจาก _technicians list
+            final techMap = _technicians.where(
+              (t) => t['uid'] == ticket.assignedToId,
+            );
+            final techName = techMap.isNotEmpty
+                ? '${techMap.first['first_name']} ${techMap.first['last_name']}'
+                : ticket.assignedToId ?? '-';
+
+            return Stack(
+              children: [
+                TicketCard(
+                  location: ticket.inUnitLocation,
+                  roomType: ticket.inUnitLocation,
+                  tag: ticket.categoryLabel,
+                  tagColor: ticket.categoryTagColor,
+                  tagBgColor: ticket.categoryTagBgColor,
+                  title: ticket.title,
+                  description: ticket.detailDesc ?? '-',
+                  timeAgo: ticket.timeAgo,
+                  assignedTo: techName,
+                  isSelected: false,
+                  onTap: null,
+                ),
+                // ปุ่ม Unassign ลอยมุมขวาบน
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: TextButton.icon(
+                    onPressed: () => _unassignTicket(ticket.id),
+                    icon: const Icon(
+                      Icons.person_remove,
+                      size: 14,
+                      color: AppColors.errorRed,
+                    ),
+                    label: const Text(
+                      "Unassign",
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.errorRed,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      backgroundColor: AppColors.errorRed.withOpacity(0.08),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // ── Technician Availability ──────────────────────────────────
 
   Widget _buildTechnicianAvailability() {
     return Container(
@@ -345,8 +555,18 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                 ],
               ),
               Text(
-                "Showing active members only",
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                _selectedTicketId != null
+                    ? "เลือกช่างเพื่อ Assign"
+                    : "Showing active members only",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _selectedTicketId != null
+                      ? AppColors.primaryBlue
+                      : Colors.grey.shade400,
+                  fontWeight: _selectedTicketId != null
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                ),
               ),
             ],
           ),
@@ -383,35 +603,55 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
             child: Divider(height: 1),
           ),
 
-          // ── NOTE: ถ้า backend มี endpoint /users?role=technician ให้ fetch เพิ่ม ──
-          // ตอนนี้ยังใช้ข้อมูล static เพราะ backend ยังไม่มี list technicians endpoint
-          const TechnicianRow(
-            name: "Jane Doe",
-            role: "Plumbing Technician",
-            currentTasks: 3,
-            roleColor: Color(0xFF36B37E),
-          ),
-          const Divider(height: 1, thickness: 0.5),
-          const TechnicianRow(
-            name: "Sarah Smith",
-            role: "Electrical Technician",
-            currentTasks: 1,
-            roleColor: Color(0xFF0052CC),
-          ),
-          const Divider(height: 1, thickness: 0.5),
-          const TechnicianRow(
-            name: "Mike Ross",
-            role: "HVAC Technician",
-            currentTasks: 4,
-            roleColor: Color(0xFFFFAB00),
-          ),
-          const Divider(height: 1, thickness: 0.5),
-          const TechnicianRow(
-            name: "Dave Miller",
-            role: "HVAC Technician",
-            currentTasks: 0,
-            roleColor: Colors.grey,
-          ),
+          if (_technicians.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Text(
+                  "ไม่พบข้อมูลช่าง",
+                  style: TextStyle(color: Colors.grey.shade400),
+                ),
+              ),
+            )
+          else
+            ...(_technicians.map((tech) {
+              final techId = tech['uid'] as String;
+              final name =
+                  '${tech['first_name'] ?? ''} ${tech['last_name'] ?? ''}'
+                      .trim();
+              final role = (tech['role'] as String? ?? 'technician');
+
+              // นับ workload จาก assigned tickets ของช่างคนนี้
+              final workload = _assigned
+                  .where((t) => t.assignedToId == techId)
+                  .length;
+
+              // กำหนดสีตาม role
+              Color roleColor;
+              switch (role) {
+                case 'technician':
+                  roleColor = AppColors.primaryBlue;
+                  break;
+                default:
+                  roleColor = Colors.grey;
+              }
+
+              return Column(
+                children: [
+                  TechnicianRow(
+                    name: name,
+                    role: role,
+                    currentTasks: workload,
+                    roleColor: roleColor,
+                    isAssignEnabled: _selectedTicketId != null,
+                    onAssign: _selectedTicketId != null
+                        ? () => _assignTicket(_selectedTicketId!, techId)
+                        : null,
+                  ),
+                  const Divider(height: 1, thickness: 0.5),
+                ],
+              );
+            })),
         ],
       ),
     );

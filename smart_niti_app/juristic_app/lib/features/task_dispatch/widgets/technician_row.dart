@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:juristic_app/core/constants/app_colors.dart';
 
-class TechnicianRow extends StatefulWidget {
+class TechnicianRow extends StatelessWidget {
   final String name, role;
   final int currentTasks;
   final int maxTasks;
   final Color roleColor;
+  final bool isAssignEnabled;
+  final VoidCallback? onAssign;
 
   const TechnicianRow({
     super.key,
@@ -14,23 +16,14 @@ class TechnicianRow extends StatefulWidget {
     required this.currentTasks,
     this.maxTasks = 5,
     required this.roleColor,
+    this.isAssignEnabled = false,
+    this.onAssign,
   });
 
   @override
-  State<TechnicianRow> createState() => _TechnicianRowState();
-}
-
-class _TechnicianRowState extends State<TechnicianRow> {
-  // สร้างตัวแปรเก็บสถานะการกดปุ่ม
-  bool _isAssigned = false;
-
-  @override
   Widget build(BuildContext context) {
-    double percent = widget.currentTasks / widget.maxTasks;
-
-    // Logic สีปุ่ม: ถ้าช่างว่าง (0 tasks) หรือ ปุ่มถูกกดไปแล้ว (_isAssigned = true) ให้เป็นสีทึบ
-    bool isAvailable = widget.currentTasks == 0;
-    bool showSolidBlue = _isAssigned;
+    double percent = (currentTasks / maxTasks).clamp(0.0, 1.0);
+    bool showSolidBlue = isAssignEnabled;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -51,7 +44,7 @@ class _TechnicianRowState extends State<TechnicianRow> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.name,
+                      name,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
@@ -61,13 +54,10 @@ class _TechnicianRowState extends State<TechnicianRow> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        CircleAvatar(
-                          radius: 4,
-                          backgroundColor: widget.roleColor,
-                        ),
+                        CircleAvatar(radius: 4, backgroundColor: roleColor),
                         const SizedBox(width: 6),
                         Text(
-                          widget.role,
+                          role,
                           style: const TextStyle(
                             fontSize: 11,
                             color: AppColors.primaryBlue,
@@ -91,7 +81,7 @@ class _TechnicianRowState extends State<TechnicianRow> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    "${widget.currentTasks} / ${widget.maxTasks} Tasks",
+                    "$currentTasks / $maxTasks Tasks",
                     style: const TextStyle(
                       fontSize: 11,
                       color: Colors.black,
@@ -130,14 +120,9 @@ class _TechnicianRowState extends State<TechnicianRow> {
 
           // Button
           SizedBox(
-            width: 95, // เพิ่มความกว้างนิดนึงเผื่อคำว่า Assigned
+            width: 95,
             child: ElevatedButton(
-              onPressed: () {
-                // อัปเดต State เมื่อปุ่มถูกกด (สลับไปมาได้)
-                setState(() {
-                  _isAssigned = !_isAssigned;
-                });
-              },
+              onPressed: isAssignEnabled ? onAssign : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: showSolidBlue
                     ? AppColors.primaryBlue
@@ -145,6 +130,8 @@ class _TechnicianRowState extends State<TechnicianRow> {
                 foregroundColor: showSolidBlue
                     ? Colors.white
                     : AppColors.primaryBlue,
+                disabledBackgroundColor: Colors.grey.shade100,
+                disabledForegroundColor: Colors.grey.shade400,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -155,7 +142,7 @@ class _TechnicianRowState extends State<TechnicianRow> {
                 ),
               ),
               child: Text(
-                _isAssigned ? "Assigned" : "Assign", // เปลี่ยนข้อความตอนกดด้วย
+                isAssignEnabled ? "Assign" : "Assign",
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,

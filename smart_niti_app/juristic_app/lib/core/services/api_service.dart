@@ -77,6 +77,41 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  /// ดึงรายชื่อ technician ทั้งหมด
+  Future<List<Map<String, dynamic>>> getTechnicians() async {
+    final uri = Uri.parse(
+      '$kBaseUrl/users/',
+    ).replace(queryParameters: {'role': 'technician'});
+    final res = await _client.get(uri, headers: _headers);
+    _checkStatus(res);
+    final List<dynamic> data = jsonDecode(res.body);
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  /// assign ticket ให้ช่าง
+  Future<Map<String, dynamic>> assignTicket(
+    int ticketId,
+    String technicianId,
+  ) async {
+    final res = await _client.patch(
+      Uri.parse('$kBaseUrl/tickets/$ticketId/assign'),
+      headers: _headers,
+      body: jsonEncode({'technician_id': technicianId}),
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// unassign ticket
+  Future<Map<String, dynamic>> unassignTicket(int ticketId) async {
+    final res = await _client.patch(
+      Uri.parse('$kBaseUrl/tickets/$ticketId/unassign'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   // ─── Helpers ───────────────────────────────────────────────────
 
   void _checkStatus(http.Response res) {
