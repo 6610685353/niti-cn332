@@ -54,3 +54,6 @@ class TicketResponse(TicketBase):
     # rating: Optional[RatingResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class TicketAssign(BaseModel):
+    technician_id: str

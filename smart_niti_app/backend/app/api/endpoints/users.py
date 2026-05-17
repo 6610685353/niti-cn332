@@ -12,7 +12,16 @@ router = APIRouter(
 )
 
 @router.post("/")
-def create_user(email: str, password: str, user_info: schemas_user.UserBase, db: Session = Depends(get_db)):
+def create_user(
+    email: str, 
+    password: str, 
+    user_info: schemas_user.UserBase, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    if current_user.role != models_user.UserRole.juristic:
+        raise HTTPException(status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถสร้างผู้ใช้งานได้")
+
     try:
         firebase_user = auth.create_user(
             email=email,
@@ -58,7 +67,14 @@ def create_user(email: str, password: str, user_info: schemas_user.UserBase, db:
         raise HTTPException(status_code=400, detail=str(e))
     
 @router.delete("/{uid}")
-def delete_user(uid: str, db: Session  =Depends(get_db)):
+def delete_user(
+    uid: str, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user) # 1. รับค่า current_user
+):
+    if current_user.role != models_user.UserRole.juristic:
+        raise HTTPException(status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถลบผู้ใช้งานได้")
+
     db_user = db.query(models_user.UserModel).filter(models_user.UserModel.uid == uid).first()
 
     if not db_user:

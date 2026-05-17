@@ -7,10 +7,10 @@ from typing import Optional, List
 from database import get_db
 from models import ticket as models_ticket
 from schemas import ticket as schemas_ticket
+from auth import get_current_user
+from models import user as models_user
 
-router = APIRouter(
-    prefix="/tickets",
-    tags=["Tickets"]
+router = APIRouter(prefix="/tickets", tags=["Tickets"]
 )
 
 IMAGE_DIR = "static/ticket_images"
@@ -27,18 +27,17 @@ def create_ticket(ticket: schemas_ticket.TicketCreate, db: Session = Depends(get
     return db_ticket
 
 @router.get("/", response_model=List[schemas_ticket.TicketResponse])
-def list_tickets(
+def list_tickets_by_reqest_user(
     req_user_id: Optional[str] = Query(None, description="Filter by resident UID"),
     db: Session = Depends(get_db)
 ):
-    """ดึงรายการ Tickets ทั้งหมด หรือกรองตาม req_user_id"""
     query = db.query(models_ticket.TicketModel)
     if req_user_id:
         query = query.filter(models_ticket.TicketModel.req_user_id == req_user_id)
     return query.order_by(models_ticket.TicketModel.created_at.desc()).all()
 
 @router.get("/{ticket_id}", response_model=schemas_ticket.TicketResponse)
-def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
+def get_ticket_by_id(ticket_id: int, db: Session = Depends(get_db)):
     ticket = db.query(models_ticket.TicketModel).filter(
         models_ticket.TicketModel.id == ticket_id
     ).first()
@@ -50,46 +49,60 @@ def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
 def update_ticket_status(
     ticket_id: int,
     status: models_ticket.TicketStatus,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
 ):
-    """อัปเดตสถานะ Ticket (ใช้โดย Technician / Juristic)"""
+    if current_user.role != models_user.UserRole.technician:
+        raise HTTPException(status_code=403, detail="เฉพาะ Technician เท่านั้นที่เปลี่ยนสถานะได้")
+
     ticket = db.query(models_ticket.TicketModel).filter(
         models_ticket.TicketModel.id == ticket_id
     ).first()
+    
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+
+    if ticket.status == models_ticket.TicketStatus.submitted:
+        raise HTTPException(
+            status_code=400, 
+            detail="ไม่สามารถเปลี่ยนสถานะได้ เนื่องจาก Ticket ยังเป็น 'submitted' (ต้องผ่านการ Assign ก่อน)"
+        )
+
     ticket.status = status
     db.commit()
     db.refresh(ticket)
     return ticket
 
 @router.patch("/{ticket_id}/cancel", response_model=schemas_ticket.TicketResponse)
-def cancel_ticket(ticket_id: int, db: Session = Depends(get_db)):
-    """
-    ยกเลิก Ticket โดย Resident
-    อนุญาตเฉพาะกรณียังไม่มีการมอบหมายช่าง (assigned_to_id == None)
-    """
+def cancel_ticket(
+    ticket_id: int, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user) # ดึงข้อมูลผู้ใช้งานปัจจุบัน
+):
+    if current_user.role != models_user.UserRole.resident:
+        raise HTTPException(status_code=403, detail="เฉพาะ Resident เท่านั้นที่สามารถยกเลิก Ticket ได้")
+
     ticket = db.query(models_ticket.TicketModel).filter(
         models_ticket.TicketModel.id == ticket_id
     ).first()
+    
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    if ticket.assigned_to_id is not None:
+    if ticket.req_user_id != current_user.uid:
+        raise HTTPException(status_code=403, detail="ไม่สามารถยกเลิกใบแจ้งซ่อมของผู้อื่นได้")
+
+    allowed_statuses = [
+        models_ticket.TicketStatus.submitted, 
+        models_ticket.TicketStatus.assigned
+    ]
+    if ticket.status not in allowed_statuses:
         raise HTTPException(
             status_code=400,
-            detail="ไม่สามารถยกเลิกได้ เนื่องจากมีการมอบหมายช่างแล้ว"
+            detail=f"ไม่สามารถยกเลิกได้ เนื่องจาก Ticket อยู่ในสถานะ '{ticket.status}'"
         )
 
-    if ticket.status in (
-        models_ticket.TicketStatus.done,
-        models_ticket.TicketStatus.cancelled,
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail=f"ไม่สามารถยกเลิก Ticket ที่มีสถานะ '{ticket.status}' ได้"
-        )
-
+    # 5. อัปเดตข้อมูล
     ticket.status = models_ticket.TicketStatus.cancelled
     db.commit()
     db.refresh(ticket)
@@ -162,50 +175,45 @@ def delete_ticket_image(ticket_id: int, image_id: int, db: Session = Depends(get
     db.delete(image)
     db.commit()
 
-# ── Ticket Ratings ─────────────────────────────────────────────────────────────
- 
 @router.get("/{ticket_id}/rating", response_model=schemas_ticket.RatingResponse)
 def get_ticket_rating(ticket_id: int, db: Session = Depends(get_db)):
-    """ดึงคะแนนของ Ticket"""
     rating = db.query(models_ticket.RatingModel).filter(
         models_ticket.RatingModel.ticket_id == ticket_id
     ).first()
     if not rating:
         raise HTTPException(status_code=404, detail="ยังไม่มีการให้คะแนน")
     return rating
- 
- 
+
 @router.post("/{ticket_id}/rating", response_model=schemas_ticket.RatingResponse)
 def submit_ticket_rating(
     ticket_id: int,
     rating: schemas_ticket.RatingBase,
     db: Session = Depends(get_db),
 ):
-    """ให้คะแนน Ticket (ได้เฉพาะสถานะ done และให้ได้ครั้งเดียว)"""
     ticket = db.query(models_ticket.TicketModel).filter(
         models_ticket.TicketModel.id == ticket_id
     ).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
- 
+
     if ticket.status != models_ticket.TicketStatus.done:
         raise HTTPException(
             status_code=400,
             detail="สามารถให้คะแนนได้เฉพาะ Ticket ที่เสร็จแล้ว",
         )
- 
+
     if not (0 <= rating.score <= 5):
         raise HTTPException(
             status_code=400,
             detail="คะแนนต้องอยู่ระหว่าง 0 ถึง 5",
         )
- 
+
     existing = db.query(models_ticket.RatingModel).filter(
         models_ticket.RatingModel.ticket_id == ticket_id
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="ให้คะแนน Ticket นี้ไปแล้ว")
- 
+
     db_rating = models_ticket.RatingModel(
         ticket_id=ticket_id,
         score=rating.score,
@@ -215,3 +223,31 @@ def submit_ticket_rating(
     db.commit()
     db.refresh(db_rating)
     return db_rating
+
+@router.patch("/{ticket_id}/assign", response_model=schemas_ticket.TicketResponse)
+def assign_ticket(
+    ticket_id: int,
+    assign_data: schemas_ticket.TicketAssign,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    if current_user.role != models_user.UserRole.juristic:
+        raise HTTPException(status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถมอบหมายงานได้")
+
+    ticket = db.query(models_ticket.TicketModel).filter(
+        models_ticket.TicketModel.id == ticket_id
+    ).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    technician = db.query(models_user.UserModel).filter(
+        models_user.UserModel.uid == assign_data.technician_id,
+        models_user.UserModel.role == models_user.UserRole.technician
+    ).first()
+    if not technician:
+        raise HTTPException(status_code=404, detail="Technician not found or invalid role")
+
+    ticket.assigned_to_id = assign_data.technician_id
+    db.commit()
+    db.refresh(ticket)
+    return ticket
