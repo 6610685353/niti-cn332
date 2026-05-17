@@ -27,13 +27,25 @@ def create_ticket(ticket: schemas_ticket.TicketCreate, db: Session = Depends(get
     return db_ticket
 
 @router.get("/", response_model=List[schemas_ticket.TicketResponse])
-def list_tickets_by_reqest_user(
+def list_tickets(
     req_user_id: Optional[str] = Query(None, description="Filter by resident UID"),
-    db: Session = Depends(get_db)
+    assigned_to_id: Optional[str] = Query(None, description="Filter by technician UID"), # เพิ่มบรรทัดนี้
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
 ):
     query = db.query(models_ticket.TicketModel)
-    if req_user_id:
-        query = query.filter(models_ticket.TicketModel.req_user_id == req_user_id)
+    
+    # 1. ถ้าเป็น resident ให้เห็นแค่ของตัวเองเท่านั้น (บังคับ)
+    if current_user.role == models_user.UserRole.resident:
+        query = query.filter(models_ticket.TicketModel.req_user_id == current_user.uid)
+        
+    # 2. ถ้าเป็น technician หรือ juristic สามารถใช้ฟิลเตอร์กรองได้
+    else:
+        if req_user_id:
+            query = query.filter(models_ticket.TicketModel.req_user_id == req_user_id)
+        if assigned_to_id:
+            query = query.filter(models_ticket.TicketModel.assigned_to_id == assigned_to_id) # เพิ่มเงื่อนไขกรองช่าง
+            
     return query.order_by(models_ticket.TicketModel.created_at.desc()).all()
 
 @router.get("/{ticket_id}", response_model=schemas_ticket.TicketResponse)
