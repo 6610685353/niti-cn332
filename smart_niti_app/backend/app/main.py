@@ -1,10 +1,16 @@
 import os
+import firebase_admin
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.endpoints import tickets, users
 from models import ticket, user
 from database import engine, Base
+from firebase_admin import credentials
+
+cred = credentials.Certificate("firebase-credentials.json")
+
+firebase_admin.initialize_app(cred)
 
 app = FastAPI()
 
