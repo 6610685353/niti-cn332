@@ -4,6 +4,7 @@ from database import get_db
 from models import user as models_user
 from schemas import user as schemas_user
 from firebase_admin import auth
+from auth import get_current_user
 
 router = APIRouter(
     prefix="/users",
@@ -83,3 +84,43 @@ def get_user(uid: str, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+@router.put("/me")
+def update_my_profile(user_update: schemas_user.UserUpdate, db: Session = Depends(get_db),current_user = Depends(get_current_user)):
+    db_user = db.query(models_user.UserModel).filter(models_user.UserModel.uid == current_user.uid).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    update_data = user_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_user, key, value)
+
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@router.put("/{uid}")
+def update_user_by_admin(uid: str, admin_update: schemas_user.AdminUserUpdate, db: Session = Depends(get_db),current_user = Depends(get_current_user)):
+    if current_user.role != models_user.UserRole.juristic:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    db_user = db.query(models_user.UserModel).filter(models_user.UserModel.uid == uid).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    update_data = admin_update.model_dump(exclude_unset=True)
+    new_room_no = update_data.pop("room_no", None)
+    new_building = update_data.pop("building", None)
+
+    for key, value in update_data.items():
+        setattr(db_user, key, value)
+
+    if db_user.role == models_user.UserRole.resident and db_user.resident_info:
+        if new_room_no is not None:
+            db_user.resident_info.room_no = new_room_no
+        if new_building is not None:
+            db_user.resident_info.building = new_building
+
+    db.commit()
+    db.refresh(db_user)
+    return db_user

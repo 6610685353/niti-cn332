@@ -30,3 +30,14 @@ class ResidentBase(BaseModel):
 class ResidentResponse(ResidentBase):
     uid: str
     model_config = ConfigDict(from_attributes=True)
+
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    image_url: Optional[str] = None
+
+class AdminUserUpdate(UserUpdate):
+    role: Optional[UserRole] = None
+    status: Optional[UserStatus] = None
+    room_no: Optional[str] = None 
+    building: Optional[str] = None
