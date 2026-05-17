@@ -48,18 +48,14 @@ class DateSelector extends StatelessWidget {
                   color: isSelected
                       ? AppColors.primary
                       : isToday
-                      ? AppColors.primary.withValues(
-                          alpha: 0.4,
-                        ) // ✅ แก้เป็น withValues
+                      ? AppColors.primary.withValues(alpha: 0.4)
                       : Colors.transparent,
                   width: 1.5,
                 ),
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: AppColors.primary.withValues(
-                            alpha: 0.2,
-                          ), // ✅ แก้เป็น withValues
+                          color: AppColors.primary.withValues(alpha: 0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -73,9 +69,7 @@ class DateSelector extends StatelessWidget {
                     DateFormat('E').format(date).toUpperCase(),
                     style: TextStyle(
                       color: isSelected
-                          ? Colors.white.withValues(
-                              alpha: 0.8,
-                            ) // ✅ แก้เป็น withValues
+                          ? Colors.white.withValues(alpha: 0.8)
                           : AppColors.textLight,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,

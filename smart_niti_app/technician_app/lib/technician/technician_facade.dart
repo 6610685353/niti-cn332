@@ -6,4 +6,12 @@ class TechnicianFacade {
 
   Future<User?> login(AuthAdapter adapter) => adapter.login();
   Future<void> logout() => _auth.signOut();
+
+  /// ดึง Firebase ID Token สำหรับส่ง Authorization header ไปยัง backend
+  Future<String?> getIdToken() async {
+    return await _auth.currentUser?.getIdToken();
+  }
+
+  User? get currentUser => _auth.currentUser;
+  String? get currentUid => _auth.currentUser?.uid;
 }

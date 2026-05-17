@@ -5,6 +5,7 @@ import '../widgets/timeline_line.dart';
 import '../widgets/task_card.dart';
 import '../models/schedule_model.dart';
 import '../../core/constants/app_color.dart';
+import '../../core/services/ticket_service.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -17,10 +18,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   DateTime _selectedDate = DateTime.now();
   Timer? _timer;
 
+  List<ScheduleModel> _scheduleItems = [];
+  bool _loading = true;
+  String? _error;
+
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+    _loadSchedule();
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() {});
     });
   }
@@ -29,6 +35,27 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadSchedule() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final items = await TicketService.getSchedule();
+      if (!mounted) return;
+      setState(() {
+        _scheduleItems = items;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
   }
 
   bool _isTaskInProgress(ScheduleModel item) {
@@ -45,22 +72,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         int.parse(timeParts[1]),
       );
 
-      final durationVal = int.parse(item.duration.split(' ')[0]);
+      final durationVal = int.tryParse(item.duration.split(' ')[0]) ?? 60;
       final end = start.add(Duration(minutes: durationVal));
 
       return now.isAfter(start) && now.isBefore(end);
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final filteredTasks = scheduleMockData.where((task) {
+    final filteredTasks = _scheduleItems.where((task) {
       return DateUtils.isSameDay(task.date, _selectedDate);
-    }).toList();
-
-    filteredTasks.sort((a, b) => a.startTime.compareTo(b.startTime));
+    }).toList()..sort((a, b) => a.startTime.compareTo(b.startTime));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -76,6 +101,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: AppColors.textDark),
+            onPressed: _loadSchedule,
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -88,27 +119,44 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           ),
           const SizedBox(height: 10),
           Expanded(
-            child: filteredTasks.isEmpty
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(_error!, textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadSchedule,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : filteredTasks.isEmpty
                 ? _buildEmptyState()
-                : ListView.builder(
-                    physics: const BouncingScrollPhysics(
-                      parent: AlwaysScrollableScrollPhysics(),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 20,
-                    ),
-                    itemCount: filteredTasks.length,
-                    itemBuilder: (context, index) {
-                      final item = filteredTasks[index];
-
-                      if (item.type == ScheduleItemType.breakTime) {
-                        return _buildTimelineRow(
-                          item.startTime,
-                          _buildBreakUI(),
-                          showCard: false,
-                        );
-                      } else {
+                : RefreshIndicator(
+                    onRefresh: _loadSchedule,
+                    child: ListView.builder(
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 20,
+                      ),
+                      itemCount: filteredTasks.length,
+                      itemBuilder: (context, index) {
+                        final item = filteredTasks[index];
+                        if (item.type == ScheduleItemType.breakTime) {
+                          return _buildTimelineRow(
+                            item.startTime,
+                            _buildBreakUI(),
+                            showCard: false,
+                          );
+                        }
                         return _buildTimelineRow(
                           item.startTime,
                           TaskCard(
@@ -119,8 +167,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             isActive: _isTaskInProgress(item),
                           ),
                         );
-                      }
-                    },
+                      },
+                    ),
                   ),
           ),
         ],
@@ -169,11 +217,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.event_busy_rounded, size: 64, color: Color(0xFFB6B6B6)),
+          Icon(Icons.event_busy_rounded, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             "No tasks scheduled for this day",
-            style: TextStyle(color: Color(0xFFB6B6B6), fontSize: 14),
+            style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
           ),
         ],
       ),

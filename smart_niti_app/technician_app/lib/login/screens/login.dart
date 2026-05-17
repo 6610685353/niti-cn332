@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/login_form.dart';
 import '../../../core/widgets/navbar.dart';
 import '../../core/constants/app_color.dart';
@@ -8,7 +9,7 @@ import '../../technician/technician_facade.dart';
 import '../../auth/adapters/email_auth_adapter.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -21,6 +22,153 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TechnicianFacade _technicianFacade = TechnicianFacade();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  @override
+  void dispose() {
+    _staffIdController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  // ── Remember Me ───────────────────────────────────────────────────────────
+  Future<void> _loadSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('saved_email');
+    final savedPassword = prefs.getString('saved_password');
+    final rememberMe = prefs.getBool('remember_me') ?? false;
+    if (rememberMe && savedEmail != null && savedPassword != null) {
+      setState(() {
+        _staffIdController.text = savedEmail;
+        _passwordController.text = savedPassword;
+        _rememberMe = true;
+      });
+    }
+  }
+
+  Future<void> _saveCredentials(String email, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('saved_email', email);
+    await prefs.setString('saved_password', password);
+    await prefs.setBool('remember_me', true);
+  }
+
+  Future<void> _clearCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('saved_email');
+    await prefs.remove('saved_password');
+    await prefs.setBool('remember_me', false);
+  }
+
+  // ── Forgot Password ───────────────────────────────────────────────────────
+  Future<void> _handleForgotPassword() async {
+    final emailCtrl = TextEditingController(
+      text: _staffIdController.text.trim(),
+    );
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Reset Password',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter your email and we\'ll send a password reset link.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                hintText: 'Email address',
+                prefixIcon: const Icon(Icons.mail_outline_rounded, size: 20),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Send Link',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final email = emailCtrl.text.trim();
+    if (email.isEmpty) {
+      _showError('Please enter your email address.');
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Password reset link sent to $email'),
+          backgroundColor: Colors.green.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      String msg;
+      switch (e.code) {
+        case 'user-not-found':
+          msg = 'No account found with this email.';
+          break;
+        case 'invalid-email':
+          msg = 'Invalid email address.';
+          break;
+        default:
+          msg = e.message ?? 'Something went wrong. Please try again.';
+      }
+      _showError(msg);
+    }
+  }
 
   Future<void> _handleLogin() async {
     final email = _staffIdController.text.trim();
@@ -52,12 +200,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
         Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
         if (data['role'] == 'technician') {
+          if (_rememberMe) {
+            await _saveCredentials(email, password);
+          } else {
+            await _clearCredentials();
+          }
           if (!mounted) return;
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(
-              builder: (context) => const MainNavWrapper(),
-            ),
+            MaterialPageRoute(builder: (context) => const MainNavWrapper()),
             (route) => false,
           );
         } else {
@@ -161,8 +312,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           // --- Input Fields ---
                           CustomInputField(
-                            label: 'Staff ID',
-                            hint: 'e.g. ST-12345',
+                            label: 'Email',
+                            hint: 'e.g. technician@example.com',
                             icon: Icons.badge_outlined,
                             controller: _staffIdController,
                           ),
@@ -205,7 +356,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ],
                               ),
                               TextButton(
-                                onPressed: () {},
+                                onPressed: _handleForgotPassword,
                                 child: const Text(
                                   'Forgot Password?',
                                   style: TextStyle(
@@ -235,7 +386,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               child: _isLoading
                                   ? const CircularProgressIndicator(
-                                      color: Colors.white)
+                                      color: Colors.white,
+                                    )
                                   : const Text(
                                       'Sign In',
                                       style: TextStyle(

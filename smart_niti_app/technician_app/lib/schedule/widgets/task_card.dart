@@ -133,12 +133,8 @@ class TaskCard extends StatelessWidget {
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.bolt_rounded, // ไอคอนสายฟ้าดู Active
-            size: 14,
-            color: Colors.green,
-          ),
-          SizedBox(width: 4), // ปรับระยะห่างนิดหน่อย
+          Icon(Icons.bolt_rounded, size: 14, color: Colors.green),
+          SizedBox(width: 4),
           Text(
             "IN PROGRESS",
             style: TextStyle(
