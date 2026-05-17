@@ -1,16 +1,20 @@
+import '../../../work_order/models/work.dart';
+
 enum ScheduleItemType { task, breakTime }
 
 class ScheduleModel {
+  final int backendId;
   final String id;
   final String title;
   final String location;
   final DateTime date;
-  final String startTime;
+  final String startTime; // "HH:MM"
   final String duration;
   final bool isActive;
   final ScheduleItemType type;
 
   ScheduleModel({
+    this.backendId = 0,
     required this.id,
     this.title = '',
     this.location = '',
@@ -20,88 +24,82 @@ class ScheduleModel {
     this.isActive = false,
     this.type = ScheduleItemType.task,
   });
+
+  factory ScheduleModel.fromWorkOrder(WorkOrder order) {
+    // scheduledTime format: "17 May 2025 • 09:00 - 10:00"
+    // หรือ "2025-05-17 • 09:00 - 10:00" ขึ้นอยู่กับ backend
+    String startTime = '';
+    String duration = '';
+    DateTime date = DateTime.now();
+
+    try {
+      final parts = order.scheduledTime.split('•');
+      final datePart = parts[0].trim();
+      date = _parseDate(datePart);
+
+      if (parts.length > 1) {
+        final timePart = parts[1].trim(); // "09:00 - 10:00"
+        final timeParts = timePart.split('-');
+        startTime = timeParts[0].trim();
+        if (timeParts.length > 1) {
+          final endTime = timeParts[1].trim();
+          duration = '${_minutesBetween(startTime, endTime)} min';
+        }
+      }
+    } catch (_) {}
+
+    return ScheduleModel(
+      backendId: order.backendId,
+      id: order.id,
+      title: order.title,
+      location: order.location,
+      date: date,
+      startTime: startTime,
+      duration: duration,
+      isActive: order.status == 'Repairing',
+    );
+  }
+
+  static DateTime _parseDate(String s) {
+    // รองรับ "2025-05-17" และ "17 May 2025"
+    try {
+      return DateTime.parse(s);
+    } catch (_) {
+      // แปลง "17 May 2025"
+      final months = {
+        'Jan': 1,
+        'Feb': 2,
+        'Mar': 3,
+        'Apr': 4,
+        'May': 5,
+        'Jun': 6,
+        'Jul': 7,
+        'Aug': 8,
+        'Sep': 9,
+        'Oct': 10,
+        'Nov': 11,
+        'Dec': 12,
+      };
+      final parts = s.split(' ');
+      if (parts.length >= 3) {
+        final day = int.tryParse(parts[0]) ?? 1;
+        final month = months[parts[1]] ?? 1;
+        final year = int.tryParse(parts[2]) ?? DateTime.now().year;
+        return DateTime(year, month, day);
+      }
+      return DateTime.now();
+    }
+  }
+
+  static int _minutesBetween(String start, String end) {
+    try {
+      final s = start.split(':');
+      final e = end.split(':');
+      final startMin = int.parse(s[0]) * 60 + int.parse(s[1]);
+      final endMin = int.parse(e[0]) * 60 + int.parse(e[1]);
+      return (endMin - startMin).abs();
+    } catch (_) {
+      return 60;
+    }
+  }
 }
-
-final DateTime today = DateTime.now();
-final DateTime tomorrow = DateTime.now().add(const Duration(days: 1));
-final DateTime yesterday = DateTime.now().subtract(const Duration(days: 1));
-
-//Mock Data
-final List<ScheduleModel> scheduleMockData = [
-  // Yesterday
-  ScheduleModel(
-    id: 'Y001',
-    title: 'Completed: Pump Check',
-    location: 'Basement B1',
-    date: yesterday,
-    startTime: '10:00',
-    duration: '30 min',
-  ),
-
-  // Today
-  ScheduleModel(
-    id: 'T001',
-    title: 'AC Repair & Maintenance',
-    location: 'Unit 402, North Tower',
-    date: today,
-    startTime: '01:00',
-    duration: '60 min',
-    isActive: true,
-  ),
-  ScheduleModel(
-    id: 'T002',
-    title: 'Light Replacement',
-    location: 'Main Lobby',
-    date: today,
-    startTime: '11:30',
-    duration: '30 min',
-  ),
-  ScheduleModel(
-    id: 'TB01',
-    date: today,
-    startTime: '12:00',
-    type: ScheduleItemType.breakTime,
-  ),
-  ScheduleModel(
-    id: 'T003',
-    title: 'Door Lock Repair',
-    location: 'Suite 101',
-    date: today,
-    startTime: '14:00',
-    duration: '45 min',
-  ),
-
-  // Tomorrow
-  ScheduleModel(
-    id: 'TM01',
-    title: 'Monthly Fire Alarm Test',
-    location: 'Every Floor',
-    date: tomorrow,
-    startTime: '08:30',
-    duration: '120 min',
-  ),
-  ScheduleModel(
-    id: 'TMB01',
-    date: tomorrow,
-    startTime: '12:00',
-    type: ScheduleItemType.breakTime,
-  ),
-  ScheduleModel(
-    id: 'TM02',
-    title: 'CCTV Inspection',
-    location: 'Security Room',
-    date: tomorrow,
-    startTime: '13:30',
-    duration: '60 min',
-  ),
-
-  // Day After Tomorrow
-  ScheduleModel(
-    id: 'AT01',
-    title: 'Pool Cleaning',
-    location: 'Clubhouse',
-    date: today.add(const Duration(days: 2)),
-    startTime: '07:00',
-    duration: '180 min',
-  ),
-];
