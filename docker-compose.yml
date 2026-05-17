@@ -1,17 +1,22 @@
-version: '1.0.0'
-services:
-  db:
-    image: postgres:15
-    container_name: postgres-db
-    restart: always
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    ports:
-      - "5500:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+version: '3.8'
 
-volumes:
-  postgres_data:
+services:
+  backend:
+    build:
+      context: ./smart_niti_app/backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - smartniti_net
+
+networks:
+  smartniti_net:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 172.16.238.0/24
+        - subnet: fd00:1::/64
