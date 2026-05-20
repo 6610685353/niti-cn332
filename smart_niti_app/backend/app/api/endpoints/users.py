@@ -16,30 +16,21 @@ def create_user(
     email: str,
     password: str,
     user_info: schemas_user.UserBase,
-    email: str,
-    password: str,
-    user_info: schemas_user.UserBase,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
     current_user=Depends(get_current_user),
 ):
     if current_user.role != models_user.UserRole.juristic:
         raise HTTPException(
             status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถสร้างผู้ใช้งานได้"
         )
-        raise HTTPException(
-            status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถสร้างผู้ใช้งานได้"
-        )
 
     try:
-        firebase_user = auth.create_user(email=email, password=password)
         firebase_user = auth.create_user(email=email, password=password)
 
         db_user = models_user.UserModel(
             uid=firebase_user.uid,
             first_name=user_info.first_name,
             last_name=user_info.last_name,
-            role=user_info.role,
             role=user_info.role,
         )
         db.add(db_user)
@@ -50,8 +41,6 @@ def create_user(
                 raise HTTPException(
                     status_code=400,
                     detail="room_no and building are required for resident role",
-                    status_code=400,
-                    detail="room_no and building are required for resident role",
                 )
 
 
@@ -59,13 +48,11 @@ def create_user(
                 uid=firebase_user.uid,
                 room_no=user_info.room_no,
                 building=user_info.building,
-                building=user_info.building,
             )
             db.add(db_resident)
 
 
         elif user_info.role == models_user.UserRole.technician:
-            db_tech = models_user.TechnicianModel(uid=firebase_user.uid, rating=0.0)
             db_tech = models_user.TechnicianModel(uid=firebase_user.uid, rating=0.0)
             db.add(db_tech)
 
@@ -83,29 +70,20 @@ def create_user(
 @router.delete("/{uid}")
 def delete_user(
     uid: str,
-    uid: str,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),  # 1. รับค่า current_user
-    current_user=Depends(get_current_user),  # 1. รับค่า current_user
+    current_user=Depends(get_current_user)
 ):
     if current_user.role != models_user.UserRole.juristic:
         raise HTTPException(
             status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถลบผู้ใช้งานได้"
         )
-        raise HTTPException(
-            status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถลบผู้ใช้งานได้"
-        )
 
-    db_user = (
-        db.query(models_user.UserModel).filter(models_user.UserModel.uid == uid).first()
-    )
     db_user = (
         db.query(models_user.UserModel).filter(models_user.UserModel.uid == uid).first()
     )
 
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found.")
-
 
     try:
         db.delete(db_user)
@@ -149,7 +127,6 @@ def update_my_profile_patch(
 
     update_data = user_update.model_dump(exclude_unset=True)
 
-    # อัปเดต email ใน Firebase Auth (email ไม่ได้เก็บใน DB)
     new_email = update_data.pop("email", None)
     if new_email:
         try:
@@ -198,8 +175,6 @@ def get_user(uid: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-
-
 @router.put("/me")
 def update_my_profile(
     user_update: schemas_user.UserUpdate,
@@ -232,15 +207,7 @@ def update_my_profile(
     db.refresh(db_user)
     return db_user
 
-
-
 @router.put("/{uid}")
-def update_user_by_admin(
-    uid: str,
-    admin_update: schemas_user.AdminUserUpdate,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
 def update_user_by_admin(
     uid: str,
     admin_update: schemas_user.AdminUserUpdate,
@@ -253,9 +220,7 @@ def update_user_by_admin(
     db_user = (
         db.query(models_user.UserModel).filter(models_user.UserModel.uid == uid).first()
     )
-    db_user = (
-        db.query(models_user.UserModel).filter(models_user.UserModel.uid == uid).first()
-    )
+    
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
