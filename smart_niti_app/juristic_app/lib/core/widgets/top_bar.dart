@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:juristic_app/core/constants/app_colors.dart';
+import 'package:juristic_app/core/widgets/notification_bell.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TopBar extends StatelessWidget implements PreferredSizeWidget {
@@ -90,8 +91,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           const SizedBox(width: 5),
 
-          // 🌟 ปุ่มกระดิ่ง Notification ที่มีกรอบและกดได้
-          _buildNotificationButton(),
+          NotificationBell(),
           const SizedBox(width: 16),
 
           // 🌟 ปุ่ม Logout ที่มีกรอบพื้นหลังสีเทา

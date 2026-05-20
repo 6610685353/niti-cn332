@@ -206,6 +206,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                   const SizedBox(height: 32),
 
                   // ── Main Content ─────────────────────────────────
+                  // ── Main Content ─────────────────────────────────
                   isNarrow
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,6 +214,9 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                             _buildUnassignedTickets(),
                             const SizedBox(height: 24),
                             _buildAssignedTickets(),
+                            const SizedBox(height: 24),
+                            // 🌟 วางกล่อง Completed ตรงนี้ (สำหรับจอเล็ก)
+                            _buildCompletedTickets(),
                             const SizedBox(height: 24),
                             _buildTechnicianAvailability(),
                           ],
@@ -227,6 +231,8 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                                   _buildUnassignedTickets(),
                                   const SizedBox(height: 24),
                                   _buildAssignedTickets(),
+                                  const SizedBox(height: 24),
+                                  _buildCompletedTickets(),
                                 ],
                               ),
                             ),
@@ -285,9 +291,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
       count: _unassigned.length,
       icon: Icons.priority_high,
       color: AppColors.primaryBlue,
-      hintText: _selectedTicketId == null
-          ? "Please select the ticket"
-          : "Please assign to the technician",
+      hintText: _selectedTicketId == null ? "" : "",
       initiallyExpanded: true, // 🌟 กางออกเสมอ เพราะเป็นงานด่วนที่ต้องจัดการ
       content: _unassigned.isEmpty
           ? _buildEmptyState("ไม่มีงานใหม่ที่รอการมอบหมาย")
@@ -375,6 +379,60 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     isSelected: false,
                     onTap: null,
                     onUnassign: () => _unassignTicket(ticket.id),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  // ── Completed Tickets ───────────────────────────────────────
+
+  Widget _buildCompletedTickets() {
+    return _buildExpandableSection(
+      title: "Completed Tickets",
+      count: _done.length,
+      icon: Icons.check_circle_outline,
+      color: AppColors.successGreen, // ใช้สีเขียวบ่งบอกความสำเร็จ
+      hintText: "",
+      initiallyExpanded: false, // 🌟 ยุบปิดไว้เพื่อไม่ให้เกะกะงานที่ต้องทำ
+      content: _done.isEmpty
+          ? _buildEmptyState("")
+          : ListView.builder(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _done.length,
+              itemBuilder: (context, i) {
+                final ticket = _done[i];
+
+                final ticketTechId = ticket.assignedToId?.toString();
+                final techMap = _technicians.where(
+                  (t) => t['uid']?.toString() == ticketTechId,
+                );
+
+                final techName = techMap.isNotEmpty
+                    ? '${techMap.first['first_name'] ?? ''} ${techMap.first['last_name'] ?? ''}'
+                          .trim()
+                    : ticketTechId ?? '-';
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: TicketCard(
+                    location: ticket.inUnitLocation,
+                    roomType: ticket.inUnitLocation,
+                    tag: ticket.categoryLabel,
+                    tagColor: ticket.categoryTagColor,
+                    tagBgColor: ticket.categoryTagBgColor,
+                    title: ticket.title,
+                    description: ticket.detailDesc ?? '-',
+                    timeAgo: ticket.timeAgo,
+                    assignedTo: techName, // โชว์ชื่อช่างที่ปิดงานนี้
+                    isSelected: false,
+                    onTap: null,
+                    // งานที่เสร็จแล้ว ไม่ต้องมีปุ่ม Unassign แล้ว
                   ),
                 );
               },
