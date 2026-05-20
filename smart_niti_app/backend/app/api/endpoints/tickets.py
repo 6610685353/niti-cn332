@@ -1,7 +1,7 @@
 import os
 import uuid
-import shutil
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, WebSocket, WebSocketDisconnect
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from database import get_db
@@ -10,6 +10,7 @@ from schemas import ticket as schemas_ticket
 from auth import get_current_user
 from models import user as models_user
 from websocket_manager import manager
+from core.supabase_client import supabase
 
 router = APIRouter(prefix="/tickets", tags=["Tickets"]
 )
@@ -120,7 +121,6 @@ def cancel_ticket(
             detail=f"ไม่สามารถยกเลิกได้ เนื่องจาก Ticket อยู่ในสถานะ '{ticket.status}'"
         )
 
-    # 5. อัปเดตข้อมูล
     ticket.status = models_ticket.TicketStatus.cancelled
     db.commit()
     db.refresh(ticket)
@@ -128,18 +128,44 @@ def cancel_ticket(
 
 # ── Ticket Images ──────────────────────────────────────────────────────────────
 
-@router.get("/{ticket_id}/images", response_model=List[schemas_ticket.TicketImageResponse])
-def get_ticket_images(ticket_id: int, db: Session = Depends(get_db)):
-    """ดึงรูปภาพทั้งหมดของ Ticket"""
+@router.get("/{ticket_id}/images/{filename}")
+def get_ticket_image(
+    ticket_id: int,
+    filename: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    if "/" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="ชื่อไฟล์ไม่ถูกต้อง")
+
+    file_path = f"{ticket_id}/{filename}"
+    db_image = db.query(models_ticket.TicketImageModel).filter(
+        models_ticket.TicketImageModel.ticket_id == ticket_id,
+        models_ticket.TicketImageModel.image_url == file_path
+    ).first()
+    if not db_image:
+        raise HTTPException(status_code=404, detail="ไม่พบรูปภาพนี้ในตั๋วที่ระบุ")
+
     ticket = db.query(models_ticket.TicketModel).filter(
         models_ticket.TicketModel.id == ticket_id
     ).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    return db.query(models_ticket.TicketImageModel).filter(
-        models_ticket.TicketImageModel.ticket_id == ticket_id
-    ).all()
+    is_staff = current_user.role in [models_user.UserRole.juristic, models_user.UserRole.technician]
+    is_owner = ticket.req_user_id == current_user.uid
+    
+    if not (is_staff or (current_user.role == models_user.UserRole.resident and is_owner)):
+        raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์เข้าถึงรูปภาพของตั๋วใบนี้")
+
+    try:
+        response = supabase.storage.from_("ticket-images").create_signed_url(
+            path=file_path, 
+            expires_in=300
+        )
+        return RedirectResponse(url=response["signedUrl"])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating URL: {str(e)}")
 
 @router.post("/{ticket_id}/images", response_model=schemas_ticket.TicketImageResponse)
 async def upload_ticket_image(
@@ -147,28 +173,25 @@ async def upload_ticket_image(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """อัปโหลดรูปภาพสำหรับ Ticket"""
-    ticket = db.query(models_ticket.TicketModel).filter(
-        models_ticket.TicketModel.id == ticket_id
-    ).first()
-    if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket not found")
-
-    allowed_types = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
-    if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="รองรับเฉพาะไฟล์รูปภาพ")
 
     ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "jpg"
     filename = f"ticket_{ticket_id}_{uuid.uuid4().hex[:8]}.{ext}"
-    file_path = os.path.join(IMAGE_DIR, filename)
+    file_path = f"{ticket_id}/{filename}"
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    try:
+        file_bytes = await file.read()
+        
+        supabase.storage.from_("ticket-images").upload(
+            path=file_path,
+            file=file_bytes,
+            file_options={"content-type": file.content_type}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"อัปโหลดรูปล้มเหลว: {str(e)}")
 
-    image_url = f"/static/ticket_images/{filename}"
     db_image = models_ticket.TicketImageModel(
         ticket_id=ticket_id,
-        image_url=image_url,
+        image_url=file_path, 
     )
     db.add(db_image)
     db.commit()
