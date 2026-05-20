@@ -22,6 +22,7 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Inter',
         scaffoldBackgroundColor: AppColors.backgroundColor,
       ),
+      debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: AppRoutes.routes,
     );

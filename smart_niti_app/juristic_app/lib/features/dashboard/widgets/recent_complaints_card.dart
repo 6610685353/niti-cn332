@@ -5,8 +5,13 @@ import 'package:juristic_app/features/home/models/ticket_model.dart';
 
 class RecentComplaintsCard extends StatefulWidget {
   final List<TicketModel> tickets;
+  final VoidCallback onViewAllTap;
 
-  const RecentComplaintsCard({super.key, required this.tickets});
+  const RecentComplaintsCard({
+    super.key,
+    required this.tickets,
+    required this.onViewAllTap,
+  });
 
   @override
   State<RecentComplaintsCard> createState() => _RecentComplaintsCardState();
@@ -14,9 +19,8 @@ class RecentComplaintsCard extends StatefulWidget {
 
 class _RecentComplaintsCardState extends State<RecentComplaintsCard> {
   final _api = ApiService();
-
   final Map<String, String> _nameCache = {};
-  bool _loadingNames = false; // เปลี่ยนเป็น false เริ่มต้นไว้ก่อน
+  bool _loadingNames = false;
 
   @override
   void initState() {
@@ -27,20 +31,19 @@ class _RecentComplaintsCardState extends State<RecentComplaintsCard> {
   @override
   void didUpdateWidget(RecentComplaintsCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // ไม่ต้องเช็ค oldWidget != widget แล้ว เพราะ Reference มันเปลี่ยนเสมอ
-    // ให้ฟังก์ชัน _fetchNames เป็นตัวเช็คเองว่ามีข้อมูลใหม่ต้องดึงไหม
     _fetchNames();
   }
 
   Future<void> _fetchNames() async {
-    // 1. คัดกรองเฉพาะ UID ที่ยังไม่มีใน Cache
-    final missingUids = widget.tickets
+    // จำกัดการดึงชื่อเฉพาะ 5 รายการแรกที่นำมาโชว์
+    final targetTickets = widget.tickets.take(5).toList();
+
+    final missingUids = targetTickets
         .map((t) => t.reqUserId)
         .toSet()
         .where((uid) => !_nameCache.containsKey(uid))
         .toList();
 
-    // 2. ถ้าข้อมูลมีครบใน Cache แล้ว ไม่ต้องทำอะไรเลย (หยุดวงจร Rebuild รัวๆ)
     if (missingUids.isEmpty) {
       if (_loadingNames && mounted) {
         setState(() => _loadingNames = false);
@@ -48,7 +51,6 @@ class _RecentComplaintsCardState extends State<RecentComplaintsCard> {
       return;
     }
 
-    // 3. ถ้ามี UID ใหม่ที่ต้องโหลด ค่อยเซ็ต Loading
     if (!mounted) return;
     setState(() => _loadingNames = true);
 
@@ -65,13 +67,14 @@ class _RecentComplaintsCardState extends State<RecentComplaintsCard> {
       }),
     );
 
-    // 4. จบการทำงาน คืนค่า Loading เป็น false
     if (!mounted) return;
     setState(() => _loadingNames = false);
   }
 
   @override
   Widget build(BuildContext context) {
+    final displayTickets = widget.tickets.take(5).toList();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -81,16 +84,37 @@ class _RecentComplaintsCardState extends State<RecentComplaintsCard> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            "Recent Complaints",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Recent Complaints",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              if (widget.tickets.length > 5)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    "Latest 5 of ${widget.tickets.length}",
+                    style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 20),
 
-          if (widget.tickets.isEmpty)
+          if (displayTickets.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 32),
               child: Center(
                 child: Text(
                   "No ticket",
@@ -99,22 +123,30 @@ class _RecentComplaintsCardState extends State<RecentComplaintsCard> {
               ),
             ),
 
-          // เปลี่ยนมาใช้ List สร้าง Widget พร้อมโยนข้อมูลให้
-          ...widget.tickets.map((t) => _buildComplaintItem(t)),
+          ...displayTickets.map((t) => _buildComplaintItem(t)),
 
-          Center(
-            child: TextButton(
-              onPressed: () {},
-              child: const Text(
-                "View All Complaint Tickets",
-                style: TextStyle(
-                  fontSize: 10,
-                  color: AppColors.darkGrey,
-                  fontWeight: FontWeight.w600,
+          if (widget.tickets.length > 5)
+            Padding(
+              padding: const EdgeInsetsGeometry.all(8.0),
+              child: Center(
+                child: TextButton.icon(
+                  onPressed: widget.onViewAllTap,
+                  icon: const Icon(
+                    Icons.arrow_forward,
+                    size: 14,
+                    color: AppColors.primaryBlue,
+                  ),
+                  label: const Text(
+                    "View All Complaint Tickets",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primaryBlue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -122,12 +154,11 @@ class _RecentComplaintsCardState extends State<RecentComplaintsCard> {
 
   Widget _buildComplaintItem(TicketModel t) {
     final displayName = _loadingNames && !_nameCache.containsKey(t.reqUserId)
-        ? '...' // แสดง Loading (...) เฉพาะคนที่ยังไม่มีใน Cache เท่านั้น
+        ? '...'
         : (_nameCache[t.reqUserId] ?? t.reqUserId);
 
     return Column(
-      // สิ่งสำคัญ!: ใส่ Key ตรงนี้เพื่อให้ Flutter หา Element เจอตอน Reload
-      key: ValueKey('ticket_${t.reqUserId}_${t.title}'),
+      key: ValueKey('ticket_${t.id}'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -202,7 +233,7 @@ class _RecentComplaintsCardState extends State<RecentComplaintsCard> {
           ],
         ),
         const Padding(
-          padding: EdgeInsets.only(top: 16, bottom: 16),
+          padding: EdgeInsets.only(top: 12, bottom: 12),
           child: Divider(height: 1, thickness: 0.5),
         ),
       ],

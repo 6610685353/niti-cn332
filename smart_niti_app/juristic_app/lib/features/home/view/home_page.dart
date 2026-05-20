@@ -12,26 +12,32 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // เริ่มต้นให้หน้าแรก (Dashboard) เป็น 0 ไว้ก่อน (เดี๋ยวตัวโหลดความจำจะมาทับค่านี้ทีหลัง)
+  // เริ่มต้นให้หน้าแรก (Dashboard) เป็น 0 ไว้ก่อน
   int _selectedIndex = 0;
 
-  // List เก็บหน้า View ต่างๆ ตามลำดับเมนู
-  final List<Widget> _pages = [
-    const DashboardPage(), // Index 0
-    const TaskDispatchPage(), // Index 1
-    // const Center(
-    //   child: Text("Announcement Page", style: TextStyle(fontSize: 24)),
-    // ), // Index 2
-    // const Center(
-    //   child: Text("Parcel Page", style: TextStyle(fontSize: 24)),
-    // ), // Index 3
-  ];
+  // 🌟 1. เปลี่ยนเป็น late final เพื่อรอให้มันถูกสร้างใน initState
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
-    // 2. พอหน้าเว็บโหลดปุ๊บ ให้วิ่งไปดึงความจำมาทันที
+    // พอหน้าเว็บโหลดปุ๊บ ให้วิ่งไปดึงความจำมาทันที
     _loadLastMenu();
+
+    // 🌟 2. กำหนดค่า _pages ตรงนี้ เพื่อส่งฟังก์ชันเปลี่ยนหน้าเข้าไปให้ DashboardPage
+    _pages = [
+      DashboardPage(
+        // เมื่อปุ่ม View All ถูกกด ให้เรียกฟังก์ชันเปลี่ยนไปเมนู index 1 (Task Dispatch)
+        onViewAllTap: () => _onMenuTapped(1),
+      ),
+      const TaskDispatchPage(), // Index 1
+      // const Center(
+      //   child: Text("Announcement Page", style: TextStyle(fontSize: 24)),
+      // ), // Index 2
+      // const Center(
+      //   child: Text("Parcel Page", style: TextStyle(fontSize: 24)),
+      // ), // Index 3
+    ];
   }
 
   // ฟังก์ชันดึงค่าที่เคยเลือกล่าสุด
@@ -54,7 +60,7 @@ class _HomePageState extends State<HomePage> {
       _selectedIndex = index;
     });
 
-    // 3. ทุกครั้งที่กดเปลี่ยนเมนู ให้เซฟค่านั้นลงความจำเบราว์เซอร์ด้วย
+    // ทุกครั้งที่กดเปลี่ยนเมนู ให้เซฟค่านั้นลงความจำเบราว์เซอร์ด้วย
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('last_menu_index', index);
   }

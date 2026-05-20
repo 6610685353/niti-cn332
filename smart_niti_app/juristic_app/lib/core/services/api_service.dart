@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:firebase_auth/firebase_auth.dart'; // 👈 1. อย่าลืม import firebase_auth
+import 'package:firebase_auth/firebase_auth.dart'; // นำเข้า firebase_auth
 
 /// เปลี่ยน baseUrl ให้ตรงกับ IP/port ที่ backend รัน
 /// เช่น ถ้ารันบนเครื่องเดียวกัน ใช้ http://localhost:8000
@@ -15,7 +15,7 @@ class ApiService {
 
   final http.Client _client = http.Client();
 
-  // 👈 2. เปลี่ยนจาก Map ธรรมดา เป็น Future function เพื่อให้ดึง Token ได้
+  // เปลี่ยนจาก Map ธรรมดา เป็น Future function เพื่อให้ดึง Token ได้
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
       'Content-Type': 'application/json',
@@ -41,7 +41,7 @@ class ApiService {
     final uri = Uri.parse('$kBaseUrl/tickets/').replace(
       queryParameters: reqUserId != null ? {'req_user_id': reqUserId} : null,
     );
-    final headers = await _getHeaders(); // 👈 3. เรียกใช้ Header ใหม่
+    final headers = await _getHeaders(); // เรียกใช้ Header ใหม่
     final res = await _client.get(uri, headers: headers);
     _checkStatus(res);
     final List<dynamic> data = jsonDecode(res.body);
@@ -110,6 +110,19 @@ class ApiService {
     return data.cast<Map<String, dynamic>>();
   }
 
+  /// ดึงรายชื่อผู้ใช้งานตาม Role (resident หรือ technician)
+  Future<List<Map<String, dynamic>>> getUsersByRole(String role) async {
+    final uri = Uri.parse(
+      '$kBaseUrl/users/',
+    ).replace(queryParameters: {'role': role});
+
+    final headers = await _getHeaders();
+    final res = await _client.get(uri, headers: headers);
+    _checkStatus(res);
+    final List<dynamic> data = jsonDecode(res.body);
+    return data.cast<Map<String, dynamic>>();
+  }
+
   /// assign ticket ให้ช่าง
   Future<Map<String, dynamic>> assignTicket(
     int ticketId,
@@ -134,6 +147,16 @@ class ApiService {
     );
     _checkStatus(res);
     return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// ลบผู้ใช้งาน
+  Future<void> deleteUser(String uid) async {
+    final headers = await _getHeaders();
+    final res = await _client.delete(
+      Uri.parse('$kBaseUrl/users/$uid'),
+      headers: headers,
+    );
+    _checkStatus(res);
   }
 
   // ─── Helpers ───────────────────────────────────────────────────

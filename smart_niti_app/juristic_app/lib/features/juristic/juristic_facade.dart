@@ -65,7 +65,7 @@ class JuristicFacade {
           break;
         case TicketStatus.assigned:
           map['assigned'] = (map['assigned'] ?? 0) + 1;
-          break;
+          break; // ป้องกัน warning (ถ้ามี) หรือปล่อยเป็นโครงสร้างเดิมได้ครับ
         case TicketStatus.inProgress:
           map['in_progress'] = (map['in_progress'] ?? 0) + 1;
           break;
@@ -83,4 +83,11 @@ class JuristicFacade {
   // ─── Users ──────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getUser(String uid) => _api.getUser(uid);
+
+  // 🌟 เพิ่มฟังก์ชันนี้เข้ามาเพื่อให้ดึงข้อมูลแยกตามกลุ่มลูกบ้าน/ช่าง ผ่าน Facade ได้
+  Future<List<Map<String, dynamic>>> getUsersByRole(String role) =>
+      _api.getUsersByRole(role);
+
+  // ลบผู้ใช้งาน
+  Future<void> deleteUser(String uid) => _api.deleteUser(uid);
 }
