@@ -76,7 +76,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('มอบหมายงานสำเร็จ'),
+            content: Text('The task has been assigned'),
             backgroundColor: Colors.green,
           ),
         );
@@ -97,7 +97,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('ยกเลิกการมอบหมายสำเร็จ'),
+            content: Text('Task unassigned'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -280,95 +280,29 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
   // ── Unassigned Tickets ───────────────────────────────────────
 
   Widget _buildUnassignedTickets() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryBlue,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Icon(
-                      Icons.priority_high,
-                      color: Colors.white,
-                      size: 16,
-                    ),
+    return _buildExpandableSection(
+      title: "Unassigned Tickets",
+      count: _unassigned.length,
+      icon: Icons.priority_high,
+      color: AppColors.primaryBlue,
+      hintText: _selectedTicketId == null
+          ? "Please select the ticket"
+          : "Please assign to the technician",
+      initiallyExpanded: true, // 🌟 กางออกเสมอ เพราะเป็นงานด่วนที่ต้องจัดการ
+      content: _unassigned.isEmpty
+          ? _buildEmptyState("ไม่มีงานใหม่ที่รอการมอบหมาย")
+          : ListView.builder(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _unassigned.length,
+              itemBuilder: (context, i) {
+                final ticket = _unassigned[i];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    "Unassigned Tickets (${_unassigned.length})",
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-              GestureDetector(
-                onTap: _loadData,
-                child: Icon(
-                  Icons.refresh,
-                  color: Colors.grey.shade400,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        if (_unassigned.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Center(
-              child: Text(
-                "No ticket",
-                style: TextStyle(color: Colors.grey.shade400),
-              ),
-            ),
-          )
-        else
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (_selectedTicketId == null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    "กดเลือก Ticket เพื่อมอบหมายให้ช่าง",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _unassigned.length,
-                itemBuilder: (context, i) {
-                  final ticket = _unassigned[i];
-                  return TicketCard(
+                  child: TicketCard(
                     location: ticket.inUnitLocation,
                     roomType: ticket.inUnitLocation,
                     tag: ticket.categoryLabel,
@@ -377,9 +311,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     title: ticket.title,
                     description: ticket.detailDesc ?? '-',
                     timeAgo: ticket.timeAgo,
-                    assignedTo:
-                        ticket.assignedToId?.toString() ??
-                        '-', // 👈 แปลงป้องกัน Error
+                    assignedTo: ticket.assignedToId?.toString() ?? '-',
                     isSelected: _selectedTicketId == ticket.id,
                     onTap: () {
                       setState(() {
@@ -388,105 +320,160 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                             : ticket.id;
                       });
                     },
-                  );
-                },
-              ),
-            ],
-          ),
-      ],
+                  ),
+                );
+              },
+            ),
     );
   }
 
   // ── Assigned Tickets (มีปุ่ม Unassign) ──────────────────────
 
   Widget _buildAssignedTickets() {
-    if (_assigned.isEmpty) return const SizedBox.shrink();
+    return _buildExpandableSection(
+      title: "Assigned Tickets",
+      count: _assigned.length,
+      icon: Icons.assignment_ind,
+      color: AppColors.warningOrange,
+      hintText: "",
+      initiallyExpanded:
+          false, // 🌟 ยุบปิดไว้เป็นค่าเริ่มต้น เพื่อประหยัดพื้นที่
+      content: _assigned.isEmpty
+          ? _buildEmptyState("ยังไม่มีงานที่ถูกมอบหมาย")
+          : ListView.builder(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _assigned.length,
+              itemBuilder: (context, i) {
+                final ticket = _assigned[i];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppColors.warningOrange,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Icon(
-                      Icons.assignment_ind,
-                      color: Colors.white,
-                      size: 16,
-                    ),
+                final ticketTechId = ticket.assignedToId?.toString();
+                final techMap = _technicians.where(
+                  (t) => t['uid']?.toString() == ticketTechId,
+                );
+
+                final techName = techMap.isNotEmpty
+                    ? '${techMap.first['first_name'] ?? ''} ${techMap.first['last_name'] ?? ''}'
+                          .trim()
+                    : ticketTechId ?? '-';
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    "Assigned Tickets (${_assigned.length})",
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                  child: TicketCard(
+                    location: ticket.inUnitLocation,
+                    roomType: ticket.inUnitLocation,
+                    tag: ticket.categoryLabel,
+                    tagColor: ticket.categoryTagColor,
+                    tagBgColor: ticket.categoryTagBgColor,
+                    title: ticket.title,
+                    description: ticket.detailDesc ?? '-',
+                    timeAgo: ticket.timeAgo,
+                    assignedTo: techName,
+                    isSelected: false,
+                    onTap: null,
+                    onUnassign: () => _unassignTicket(ticket.id),
                   ),
-                ],
-              ),
-              Text(
-                "กด Unassign ที่การ์ดเพื่อยกเลิก", // แก้ไขคำใบ้นิดหน่อย
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _assigned.length,
-          itemBuilder: (context, i) {
-            final ticket = _assigned[i];
-
-            final ticketTechId = ticket.assignedToId?.toString();
-            final techMap = _technicians.where(
-              (t) => t['uid']?.toString() == ticketTechId,
-            );
-
-            final techName = techMap.isNotEmpty
-                ? '${techMap.first['first_name'] ?? ''} ${techMap.first['last_name'] ?? ''}'
-                      .trim()
-                : ticketTechId ?? '-';
-
-            // 🌟 ไม่ต้องใช้ Stack แล้ว เรียกใช้งาน TicketCard ตัวเดียวจบเลย!
-            return TicketCard(
-              location: ticket.inUnitLocation,
-              roomType: ticket.inUnitLocation,
-              tag: ticket.categoryLabel,
-              tagColor: ticket.categoryTagColor,
-              tagBgColor: ticket.categoryTagBgColor,
-              title: ticket.title,
-              description: ticket.detailDesc ?? '-',
-              timeAgo: ticket.timeAgo,
-              assignedTo: techName,
-              isSelected: false,
-              onTap: null,
-              onUnassign: () =>
-                  _unassignTicket(ticket.id), // 👈 โยนคำสั่งเข้าไปตรงนี้
-            );
-          },
-        ),
-      ],
+                );
+              },
+            ),
     );
   }
 
+  // ── UI Helper: สร้างกล่องยุบขยายได้ (Accordion) ───────────────
+
+  Widget _buildExpandableSection({
+    required String title,
+    required int count,
+    required IconData icon,
+    required Color color,
+    required String hintText,
+    required bool initiallyExpanded,
+    required Widget content,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Theme(
+        // ลบเส้นขอบของ ExpansionTile ที่ชอบโผล่มาตอนกางออก
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: initiallyExpanded,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(icon, color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                "$title ($count)",
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          subtitle: hintText.isNotEmpty
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    hintText,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  ),
+                )
+              : null,
+          children: [
+            const Divider(height: 1, thickness: 1),
+            // 🌟 จุดสำคัญ: ล็อกความสูงตอนกางออกไม่ให้เกิน 450px ถ้าล้นให้เลื่อน Scroll เอา
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 450),
+              child: content,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── UI Helper: หน้าต่างตอนไม่มีข้อมูล ──────────────────────────
+
+  Widget _buildEmptyState(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inbox_outlined, size: 48, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
   // ── Technician Availability ──────────────────────────────────
 
   Widget _buildTechnicianAvailability() {
@@ -526,7 +513,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
               ),
               Text(
                 _selectedTicketId != null
-                    ? "เลือกช่างเพื่อ Assign"
+                    ? "Click to Assign"
                     : "Active members",
                 style: TextStyle(
                   fontSize: 12,
