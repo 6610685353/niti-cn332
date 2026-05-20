@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from models import user as models_user
+import models.user as models_user
 from schemas import user as schemas_user
 from firebase_admin import auth
 from auth import get_current_user
@@ -9,7 +9,6 @@ from typing import Optional, List
 from fastapi import Query
 
 router = APIRouter(prefix="/users", tags=["Users"])
-
 
 @router.post("/")
 def create_user(
@@ -43,14 +42,12 @@ def create_user(
                     detail="room_no and building are required for resident role",
                 )
 
-
             db_resident = models_user.ResidentModel(
                 uid=firebase_user.uid,
                 room_no=user_info.room_no,
                 building=user_info.building,
             )
             db.add(db_resident)
-
 
         elif user_info.role == models_user.UserRole.technician:
             db_tech = models_user.TechnicianModel(uid=firebase_user.uid, rating=0.0)
@@ -63,9 +60,6 @@ def create_user(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
-
-
-
 
 @router.delete("/{uid}")
 def delete_user(
@@ -156,12 +150,39 @@ def list_users(
     if current_user.role != models_user.UserRole.juristic:
         raise HTTPException(status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถดูรายชื่อผู้ใช้งานได้")
 
-    query = db.query(models_user.UserModel)
+    # 1. Query แบบ JOIN ตาราง
+    query = db.query(
+        models_user.UserModel,
+        models_user.ResidentModel.room_no,
+        models_user.ResidentModel.building
+    ).outerjoin(
+        models_user.ResidentModel,
+        models_user.UserModel.uid == models_user.ResidentModel.uid
+    )
     
     if role:
         query = query.filter(models_user.UserModel.role == role)
         
-    return query.all()
+    results = query.all()
+    
+    # 2. แกะกล่อง Tuple และประกอบร่างใหม่เป็น List of Dictionaries
+    formatted_users = []
+    for user, room_no, building in results:
+        user_dict = {
+            "uid": user.uid,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "role": user.role,
+            "status": user.status,
+            "image_url": user.image_url,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
+            "room_no": room_no,
+            "building": building
+        }
+        formatted_users.append(user_dict)
+        
+    return formatted_users
 
 @router.get("/{uid}", response_model=schemas_user.UserResponse)
 def get_user(uid: str, db: Session = Depends(get_db)):
@@ -220,7 +241,7 @@ def update_user_by_admin(
     db_user = (
         db.query(models_user.UserModel).filter(models_user.UserModel.uid == uid).first()
     )
-    
+
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
