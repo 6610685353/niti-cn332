@@ -50,7 +50,10 @@ class _RepairHistoryScreenState extends State<RepairHistoryScreen> {
   }
 
   List<WorkOrder> get _filteredOrders {
-    if (_selectedTab == 'All') return _allTickets;
+    // ← แก้ไข: หน้า All ไม่แสดง Submitted (ticket ที่ยังไม่ผ่านการ assign)
+    if (_selectedTab == 'All') {
+      return _allTickets.where((o) => o.status != 'Submitted').toList();
+    }
     return _allTickets.where((o) => o.status == _selectedTab).toList();
   }
 

@@ -5,3 +5,4 @@ implementation_plan.md
 *.pyc
 *smart_niti_app/backend/.venv
 firebase-credentials.json
+.DS_Store

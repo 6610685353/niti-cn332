@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database import get_db
 import models.user as models_user
@@ -6,7 +6,6 @@ from schemas import user as schemas_user
 from firebase_admin import auth
 from auth import get_current_user
 from typing import Optional, List
-from fastapi import Query
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -145,7 +144,7 @@ def update_my_profile_patch(
 def list_users(
     role: Optional[str] = Query(None, description="filter by role e.g. technician"),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user)
 ):
     if current_user.role != models_user.UserRole.juristic:
         raise HTTPException(status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถดูรายชื่อผู้ใช้งานได้")
@@ -189,24 +188,11 @@ def get_user(uid: str, db: Session = Depends(get_db)):
     user = (
         db.query(models_user.UserModel).filter(models_user.UserModel.uid == uid).first()
     )
-    user = (
-        db.query(models_user.UserModel).filter(models_user.UserModel.uid == uid).first()
-    )
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 @router.put("/me")
-def update_my_profile(
-    user_update: schemas_user.UserUpdate,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    db_user = (
-        db.query(models_user.UserModel)
-        .filter(models_user.UserModel.uid == current_user.uid)
-        .first()
-    )
 def update_my_profile(
     user_update: schemas_user.UserUpdate,
     db: Session = Depends(get_db),
@@ -261,4 +247,3 @@ def update_user_by_admin(
     db.commit()
     db.refresh(db_user)
     return db_user
-

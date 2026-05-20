@@ -266,6 +266,7 @@ def assign_ticket(
         raise HTTPException(status_code=404, detail="Technician not found or invalid role")
 
     ticket.assigned_to_id = assign_data.technician_id
+    ticket.status = models_ticket.TicketStatus.assigned
     db.commit()
     db.refresh(ticket)
     return ticket
