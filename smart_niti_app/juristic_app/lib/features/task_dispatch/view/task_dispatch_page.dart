@@ -292,7 +292,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
       icon: Icons.priority_high,
       color: AppColors.primaryBlue,
       hintText: _selectedTicketId == null ? "" : "",
-      initiallyExpanded: true, // 🌟 กางออกเสมอ เพราะเป็นงานด่วนที่ต้องจัดการ
+      initiallyExpanded: true,
       content: _unassigned.isEmpty
           ? _buildEmptyState("ไม่มีงานใหม่ที่รอการมอบหมาย")
           : ListView.builder(
@@ -301,6 +301,10 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
               itemCount: _unassigned.length,
               itemBuilder: (context, i) {
                 final ticket = _unassigned[i];
+
+                // 🌟 เช็คว่ามีรูปไหม (สมมติว่าใน TicketModel คุณใช้ชื่อตัวแปรว่า imageUrls)
+                final List<String> images = ticket.imageUrls ?? [];
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -324,6 +328,15 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                             : ticket.id;
                       });
                     },
+
+                    // 🌟 ส่งค่าให้ปุ่มรูปภาพ
+                    hasImages: images.isNotEmpty,
+                    onImageTap: () async {
+                      final headers = await _facade.getHeaders();
+                      if (context.mounted) {
+                        _showImageViewer(context, images, headers);
+                      }
+                    },
                   ),
                 );
               },
@@ -331,7 +344,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
     );
   }
 
-  // ── Assigned Tickets (มีปุ่ม Unassign) ──────────────────────
+  // ── Assigned Tickets ────────────────────────────────────────
 
   Widget _buildAssignedTickets() {
     return _buildExpandableSection(
@@ -340,8 +353,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
       icon: Icons.assignment_ind,
       color: AppColors.warningOrange,
       hintText: "",
-      initiallyExpanded:
-          false, // 🌟 ยุบปิดไว้เป็นค่าเริ่มต้น เพื่อประหยัดพื้นที่
+      initiallyExpanded: false,
       content: _assigned.isEmpty
           ? _buildEmptyState("ยังไม่มีงานที่ถูกมอบหมาย")
           : ListView.builder(
@@ -350,12 +362,13 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
               itemCount: _assigned.length,
               itemBuilder: (context, i) {
                 final ticket = _assigned[i];
+                final List<String> images =
+                    ticket.imageUrls ?? []; // 🌟 ดึงรูปลูกบ้าน
 
                 final ticketTechId = ticket.assignedToId?.toString();
                 final techMap = _technicians.where(
                   (t) => t['uid']?.toString() == ticketTechId,
                 );
-
                 final techName = techMap.isNotEmpty
                     ? '${techMap.first['first_name'] ?? ''} ${techMap.first['last_name'] ?? ''}'
                           .trim()
@@ -379,6 +392,15 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     isSelected: false,
                     onTap: null,
                     onUnassign: () => _unassignTicket(ticket.id),
+
+                    // 🌟 ส่งค่าให้ปุ่มรูปภาพ
+                    hasImages: images.isNotEmpty,
+                    onImageTap: () async {
+                      final headers = await _facade.getHeaders();
+                      if (context.mounted) {
+                        _showImageViewer(context, images, headers);
+                      }
+                    },
                   ),
                 );
               },
@@ -393,9 +415,9 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
       title: "Completed Tickets",
       count: _done.length,
       icon: Icons.check_circle_outline,
-      color: AppColors.successGreen, // ใช้สีเขียวบ่งบอกความสำเร็จ
+      color: AppColors.successGreen,
       hintText: "",
-      initiallyExpanded: false, // 🌟 ยุบปิดไว้เพื่อไม่ให้เกะกะงานที่ต้องทำ
+      initiallyExpanded: false,
       content: _done.isEmpty
           ? _buildEmptyState("")
           : ListView.builder(
@@ -404,12 +426,13 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
               itemCount: _done.length,
               itemBuilder: (context, i) {
                 final ticket = _done[i];
+                final List<String> images =
+                    ticket.imageUrls ?? []; // 🌟 ดึงรูปลูกบ้าน
 
                 final ticketTechId = ticket.assignedToId?.toString();
                 final techMap = _technicians.where(
                   (t) => t['uid']?.toString() == ticketTechId,
                 );
-
                 final techName = techMap.isNotEmpty
                     ? '${techMap.first['first_name'] ?? ''} ${techMap.first['last_name'] ?? ''}'
                           .trim()
@@ -429,10 +452,18 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     title: ticket.title,
                     description: ticket.detailDesc ?? '-',
                     timeAgo: ticket.timeAgo,
-                    assignedTo: techName, // โชว์ชื่อช่างที่ปิดงานนี้
+                    assignedTo: techName,
                     isSelected: false,
                     onTap: null,
-                    // งานที่เสร็จแล้ว ไม่ต้องมีปุ่ม Unassign แล้ว
+
+                    // 🌟 ส่งค่าให้ปุ่มรูปภาพ
+                    hasImages: images.isNotEmpty,
+                    onImageTap: () async {
+                      final headers = await _facade.getHeaders();
+                      if (context.mounted) {
+                        _showImageViewer(context, images, headers);
+                      }
+                    },
                   ),
                 );
               },
@@ -669,6 +700,96 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
             })),
         ],
       ),
+    );
+  }
+
+  // ── UI Helper: สร้างหน้าต่างดูรูปภาพ (ปัดซ้าย-ขวาได้) ───────────────
+  void _showImageViewer(
+    BuildContext context,
+    List<String> imageUrls,
+    Map<String, String> headers,
+  ) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // กล่องแสดงรูปภาพ
+              Container(
+                height: 500,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      // 🌟 PageView ทำให้สามารถปัดซ้าย-ขวาได้
+                      child: PageView.builder(
+                        itemCount: imageUrls.length,
+                        itemBuilder: (context, index) {
+                          return InteractiveViewer(
+                            // 🌟 ทำให้ใช้นิ้วซูมรูปได้
+                            child: Image.network(
+                              imageUrls[index],
+                              headers: headers, // สำคัญมาก ต้องแนบ Token
+                              fit: BoxFit.contain,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                      ),
+                                    );
+                                  },
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: Colors.white,
+                                    size: 50,
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    // จุดไข่ปลาบอกจำนวนรูปภาพ (ถ้ามีมากกว่า 1 รูป)
+                    if (imageUrls.length > 1)
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          "ปัดซ้าย-ขวา เพื่อดูรูปถัดไป",
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // ปุ่มกากบาทปิด Popup มุมขวาบน
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:firebase_auth/firebase_auth.dart'; // นำเข้า firebase_auth
+import 'package:firebase_auth/firebase_auth.dart'; // 👈 1. อย่าลืม import firebase_auth
 
 /// เปลี่ยน baseUrl ให้ตรงกับ IP/port ที่ backend รัน
 /// เช่น ถ้ารันบนเครื่องเดียวกัน ใช้ http://localhost:8000
@@ -15,8 +15,8 @@ class ApiService {
 
   final http.Client _client = http.Client();
 
-  // เปลี่ยนจาก Map ธรรมดา เป็น Future function เพื่อให้ดึง Token ได้
-  Future<Map<String, String>> _getHeaders() async {
+  // 👈 2. เปลี่ยนจาก Map ธรรมดา เป็น Future function เพื่อให้ดึง Token ได้
+  Future<Map<String, String>> getHeaders() async {
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -41,7 +41,7 @@ class ApiService {
     final uri = Uri.parse('$kBaseUrl/tickets/').replace(
       queryParameters: reqUserId != null ? {'req_user_id': reqUserId} : null,
     );
-    final headers = await _getHeaders(); // เรียกใช้ Header ใหม่
+    final headers = await getHeaders(); // 👈 3. เรียกใช้ Header ใหม่
     final res = await _client.get(uri, headers: headers);
     _checkStatus(res);
     final List<dynamic> data = jsonDecode(res.body);
@@ -50,7 +50,7 @@ class ApiService {
 
   /// ดึง ticket เดี่ยวตาม id
   Future<Map<String, dynamic>> getTicket(int ticketId) async {
-    final headers = await _getHeaders();
+    final headers = await getHeaders();
     final res = await _client.get(
       Uri.parse('$kBaseUrl/tickets/$ticketId'),
       headers: headers,
@@ -64,7 +64,7 @@ class ApiService {
     int ticketId,
     String status,
   ) async {
-    final headers = await _getHeaders();
+    final headers = await getHeaders();
     final res = await _client.patch(
       Uri.parse('$kBaseUrl/tickets/$ticketId/status?status=$status'),
       headers: headers,
@@ -75,7 +75,7 @@ class ApiService {
 
   /// ยกเลิก ticket
   Future<Map<String, dynamic>> cancelTicket(int ticketId) async {
-    final headers = await _getHeaders();
+    final headers = await getHeaders();
     final res = await _client.patch(
       Uri.parse('$kBaseUrl/tickets/$ticketId/cancel'),
       headers: headers,
@@ -88,7 +88,7 @@ class ApiService {
 
   /// ดึงข้อมูล user ตาม uid
   Future<Map<String, dynamic>> getUser(String uid) async {
-    final headers = await _getHeaders();
+    final headers = await getHeaders();
     final res = await _client.get(
       Uri.parse('$kBaseUrl/users/$uid'),
       headers: headers,
@@ -103,20 +103,7 @@ class ApiService {
       '$kBaseUrl/users/',
     ).replace(queryParameters: {'role': 'technician'});
 
-    final headers = await _getHeaders();
-    final res = await _client.get(uri, headers: headers);
-    _checkStatus(res);
-    final List<dynamic> data = jsonDecode(res.body);
-    return data.cast<Map<String, dynamic>>();
-  }
-
-  /// ดึงรายชื่อผู้ใช้งานตาม Role (resident หรือ technician)
-  Future<List<Map<String, dynamic>>> getUsersByRole(String role) async {
-    final uri = Uri.parse(
-      '$kBaseUrl/users/',
-    ).replace(queryParameters: {'role': role});
-
-    final headers = await _getHeaders();
+    final headers = await getHeaders();
     final res = await _client.get(uri, headers: headers);
     _checkStatus(res);
     final List<dynamic> data = jsonDecode(res.body);
@@ -128,7 +115,7 @@ class ApiService {
     int ticketId,
     String technicianId,
   ) async {
-    final headers = await _getHeaders();
+    final headers = await getHeaders();
     final res = await _client.patch(
       Uri.parse('$kBaseUrl/tickets/$ticketId/assign'),
       headers: headers,
@@ -140,7 +127,7 @@ class ApiService {
 
   /// unassign ticket
   Future<Map<String, dynamic>> unassignTicket(int ticketId) async {
-    final headers = await _getHeaders();
+    final headers = await getHeaders();
     final res = await _client.patch(
       Uri.parse('$kBaseUrl/tickets/$ticketId/unassign'),
       headers: headers,
@@ -149,9 +136,25 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  // ─── Users (เพิ่มเติม) ──────────────────────────────────────────
+
+  /// ดึงรายชื่อผู้ใช้งานตาม Role (resident หรือ technician)
+  Future<List<Map<String, dynamic>>> getUsersByRole(String role) async {
+    final uri = Uri.parse(
+      '$kBaseUrl/users/',
+    ).replace(queryParameters: {'role': role});
+
+    final headers = await getHeaders(); // เรียกใช้ getHeaders ที่เราเพิ่งแก้ไป
+    final res = await _client.get(uri, headers: headers);
+    _checkStatus(res);
+
+    final List<dynamic> data = jsonDecode(res.body);
+    return data.cast<Map<String, dynamic>>();
+  }
+
   /// ลบผู้ใช้งาน
   Future<void> deleteUser(String uid) async {
-    final headers = await _getHeaders();
+    final headers = await getHeaders(); // เรียกใช้ getHeaders ที่เราเพิ่งแก้ไป
     final res = await _client.delete(
       Uri.parse('$kBaseUrl/users/$uid'),
       headers: headers,

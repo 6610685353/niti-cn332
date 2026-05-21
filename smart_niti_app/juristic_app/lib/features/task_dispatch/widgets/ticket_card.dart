@@ -4,11 +4,13 @@ import 'package:juristic_app/core/constants/app_colors.dart';
 class TicketCard extends StatelessWidget {
   final String location, roomType, tag, title, description, timeAgo, assignedTo;
   final Color tagColor, tagBgColor;
-
   final bool isSelected;
   final VoidCallback? onTap;
-  // 🌟 เพิ่มฟังก์ชัน onUnassign สำหรับรับคำสั่งยกเลิกงาน
   final VoidCallback? onUnassign;
+
+  // 🌟 เพิ่ม 2 ตัวแปรนี้สำหรับจัดการรูปภาพ
+  final bool hasImages;
+  final VoidCallback? onImageTap;
 
   const TicketCard({
     super.key,
@@ -23,7 +25,9 @@ class TicketCard extends StatelessWidget {
     required this.assignedTo,
     this.isSelected = false,
     this.onTap,
-    this.onUnassign, // 👈 อย่าลืมรับค่าตรงนี้
+    this.onUnassign,
+    this.hasImages = false, // ค่าเริ่มต้นคือไม่มีรูป
+    this.onImageTap,
   });
 
   @override
@@ -138,7 +142,6 @@ class TicketCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            // 🌟 ปรับปรุงส่วนล่างสุดของ Card ให้รองรับปุ่ม Unassign ได้แบบไม่ซ้อนทับ
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -167,7 +170,6 @@ class TicketCard extends StatelessWidget {
                               : AppColors.successGreen,
                         ),
                       ),
-                      // 🌟 ถ้ามีการส่งฟังก์ชัน onUnassign มา ให้โชว์ปุ่มนี้ต่อท้ายชื่อช่าง
                       if (onUnassign != null)
                         Padding(
                           padding: const EdgeInsets.only(left: 8.0, top: 4.0),
@@ -208,13 +210,27 @@ class TicketCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                // 🌟 ปุ่มรูปภาพ
                 IconButton(
                   onPressed: () {
-                    // กดปุ่มรูปภาพเพื่อดูรายละเอียดเพิ่มเติม
+                    if (!hasImages) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('No picture attached with this ticket'),
+                          backgroundColor: AppColors.warningOrange,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                      return;
+                    }
+                    if (onImageTap != null) onImageTap!();
                   },
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.image,
-                    color: Colors.black87,
+                    // สีเทาถ้าไม่มีรูป สีน้ำเงินถ้ามีรูป
+                    color: hasImages
+                        ? AppColors.primaryBlue
+                        : Colors.grey.shade300,
                     size: 30,
                   ),
                   padding: EdgeInsets.zero,

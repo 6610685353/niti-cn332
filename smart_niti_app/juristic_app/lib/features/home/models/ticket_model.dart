@@ -70,6 +70,9 @@ class TicketModel {
   final DateTime updatedAt;
   final DateTime? closedAt;
 
+  // 🌟 1. เพิ่มฟิลด์สำหรับเก็บรูปภาพ
+  final List<String>? imageUrls;
+
   TicketModel({
     required this.id,
     required this.reqUserId,
@@ -86,9 +89,22 @@ class TicketModel {
     required this.createdAt,
     required this.updatedAt,
     this.closedAt,
+    this.imageUrls, // 🌟 2. รับค่าเข้ามาใน Constructor
   });
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
+    // 🌟 3. ดึงข้อมูลรูปรองรับทั้งแบบ List ธรรมดาและ List of Objects
+    List<String> parsedImages = [];
+    if (json['images'] != null) {
+      for (var img in json['images']) {
+        if (img is String) {
+          parsedImages.add(img);
+        } else if (img is Map && img['image_url'] != null) {
+          parsedImages.add(img['image_url'].toString());
+        }
+      }
+    }
+
     return TicketModel(
       id: json['id'] as int,
       reqUserId: json['req_user_id'] as String,
@@ -107,6 +123,7 @@ class TicketModel {
       closedAt: json['closed_at'] != null
           ? DateTime.parse(json['closed_at'] as String)
           : null,
+      imageUrls: parsedImages, // 🌟 4. ใส่ข้อมูลรูปเข้าไป
     );
   }
 

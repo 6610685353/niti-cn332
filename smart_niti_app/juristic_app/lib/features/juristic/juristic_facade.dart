@@ -8,48 +8,46 @@ class JuristicFacade {
   final ApiService _api = ApiService();
 
   // ─── Auth ───────────────────────────────────────────────────────
-
   Future<User?> login(AuthAdapter adapter) => adapter.login();
   Future<void> logout() => _auth.signOut();
 
-  /// ดึงรายชื่อช่างทั้งหมด
-  Future<List<Map<String, dynamic>>> getTechnicians() => _api.getTechnicians();
-
-  /// assign ticket ให้ช่าง
-  Future<TicketModel> assignTicket(int ticketId, String technicianId) async {
-    final raw = await _api.assignTicket(ticketId, technicianId);
-    return TicketModel.fromJson(raw);
-  }
-
-  /// unassign ticket
-  Future<TicketModel> unassignTicket(int ticketId) async {
-    final raw = await _api.unassignTicket(ticketId);
-    return TicketModel.fromJson(raw);
-  }
-
   // ─── Tickets ────────────────────────────────────────────────────
-
-  /// ดึง ticket ทั้งหมด
   Future<List<TicketModel>> getTickets({String? reqUserId}) async {
     final raw = await _api.getTickets(reqUserId: reqUserId);
     return raw.map((j) => TicketModel.fromJson(j)).toList();
   }
 
-  /// ดึง ticket เดี่ยว
   Future<TicketModel> getTicket(int ticketId) async {
     final raw = await _api.getTicket(ticketId);
     return TicketModel.fromJson(raw);
   }
 
-  /// อัปเดต status ticket
   Future<TicketModel> updateTicketStatus(int ticketId, String status) async {
     final raw = await _api.updateTicketStatus(ticketId, status);
     return TicketModel.fromJson(raw);
   }
 
-  // ─── Stats helpers ──────────────────────────────────────────────
+  Future<TicketModel> assignTicket(int ticketId, String technicianId) async {
+    final raw = await _api.assignTicket(ticketId, technicianId);
+    return TicketModel.fromJson(raw);
+  }
 
-  /// นับ ticket แยกตาม status จาก list ที่มีอยู่แล้ว
+  Future<TicketModel> unassignTicket(int ticketId) async {
+    final raw = await _api.unassignTicket(ticketId);
+    return TicketModel.fromJson(raw);
+  }
+
+  // ─── Users ──────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getUser(String uid) => _api.getUser(uid);
+  Future<List<Map<String, dynamic>>> getTechnicians() => _api.getTechnicians();
+  Future<List<Map<String, dynamic>>> getUsersByRole(String role) =>
+      _api.getUsersByRole(role);
+  Future<void> deleteUser(String uid) => _api.deleteUser(uid);
+
+  // ─── Helpers ────────────────────────────────────────────────────
+  // 🌟 เพิ่มฟังก์ชันนี้เพื่อดึง Token ไปให้รูปภาพ
+  Future<Map<String, String>> getHeaders() => _api.getHeaders();
+
   Map<String, int> countByStatus(List<TicketModel> tickets) {
     final map = <String, int>{
       'submitted': 0,
@@ -65,7 +63,7 @@ class JuristicFacade {
           break;
         case TicketStatus.assigned:
           map['assigned'] = (map['assigned'] ?? 0) + 1;
-          break; // ป้องกัน warning (ถ้ามี) หรือปล่อยเป็นโครงสร้างเดิมได้ครับ
+          break;
         case TicketStatus.inProgress:
           map['in_progress'] = (map['in_progress'] ?? 0) + 1;
           break;
@@ -79,15 +77,4 @@ class JuristicFacade {
     }
     return map;
   }
-
-  // ─── Users ──────────────────────────────────────────────────────
-
-  Future<Map<String, dynamic>> getUser(String uid) => _api.getUser(uid);
-
-  // 🌟 เพิ่มฟังก์ชันนี้เข้ามาเพื่อให้ดึงข้อมูลแยกตามกลุ่มลูกบ้าน/ช่าง ผ่าน Facade ได้
-  Future<List<Map<String, dynamic>>> getUsersByRole(String role) =>
-      _api.getUsersByRole(role);
-
-  // ลบผู้ใช้งาน
-  Future<void> deleteUser(String uid) => _api.deleteUser(uid);
 }
