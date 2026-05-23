@@ -41,16 +41,28 @@ class _RepairHistoryPageState extends State<RepairHistoryPage> {
     super.dispose();
   }
 
+  /// ดึง Firebase ID Token พร้อม Authorization header
+  Future<Map<String, String>> _authHeaders() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return {};
+    final token = await user.getIdToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
+
   Future<void> _fetchAndEmit() async {
     if (_streamController.isClosed) return;
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
 
-      final uri = Uri.parse(
-        '${AppConfig.baseUrl}/tickets/',
-      ).replace(queryParameters: {'req_user_id': uid});
-      final ticketRes = await http.get(uri);
+      final headers = await _authHeaders();
+      if (headers.isEmpty) return;
+
+      final uri = Uri.parse('${AppConfig.baseUrl}/tickets/');
+      final ticketRes = await http.get(uri, headers: headers);
       if (ticketRes.statusCode != 200) return;
 
       final tickets = (jsonDecode(ticketRes.body) as List)
@@ -64,6 +76,7 @@ class _RepairHistoryPageState extends State<RepairHistoryPage> {
           try {
             final res = await http.get(
               Uri.parse('${AppConfig.baseUrl}/tickets/${t.id}/rating'),
+              headers: headers,
             );
             final score = res.statusCode == 200
                 ? (jsonDecode(res.body)['score'] as int?)

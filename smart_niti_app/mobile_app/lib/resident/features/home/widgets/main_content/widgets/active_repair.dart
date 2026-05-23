@@ -14,7 +14,6 @@ class _RepairsSnapshot {
   final List<RepairTicket> tickets;
   const _RepairsSnapshot(this.tickets);
 
-  // distinct: เปรียบเทียบด้วย id + status ของแต่ละ ticket
   @override
   bool operator ==(Object other) {
     if (other is! _RepairsSnapshot) return false;
@@ -58,7 +57,6 @@ class _ActiveRepairState extends State<ActiveRepair> {
   void initState() {
     super.initState();
     _fetchAndEmit();
-    // Polling ทุก 3 วินาที
     _pollTimer = Timer.periodic(
       const Duration(seconds: 3),
       (_) => _fetchAndEmit(),
@@ -72,6 +70,17 @@ class _ActiveRepairState extends State<ActiveRepair> {
     super.dispose();
   }
 
+  /// ดึง Firebase ID Token พร้อม Authorization header
+  Future<Map<String, String>> _authHeaders() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return {};
+    final token = await user.getIdToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
+
   Future<void> _fetchAndEmit() async {
     if (_streamController.isClosed) return;
     try {
@@ -81,11 +90,15 @@ class _ActiveRepairState extends State<ActiveRepair> {
         return;
       }
 
-      final uri = Uri.parse(
-        '${AppConfig.baseUrl}/tickets/',
-      ).replace(queryParameters: {'req_user_id': uid});
+      final headers = await _authHeaders();
+      if (headers.isEmpty) {
+        _emit(_RepairsSnapshot([]));
+        return;
+      }
 
-      final res = await http.get(uri);
+      final uri = Uri.parse('${AppConfig.baseUrl}/tickets/');
+
+      final res = await http.get(uri, headers: headers);
       if (_streamController.isClosed) return;
       if (res.statusCode != 200) return;
 
@@ -107,7 +120,6 @@ class _ActiveRepairState extends State<ActiveRepair> {
 
   void _emit(_RepairsSnapshot next) {
     if (_streamController.isClosed) return;
-    // distinct — กัน rebuild ถ้าข้อมูลไม่เปลี่ยน
     if (next != _lastEmitted) {
       _lastEmitted = next;
       _streamController.add(next);

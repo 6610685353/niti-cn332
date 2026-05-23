@@ -31,15 +31,6 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
   bool _isSubmittingRating = false;
   final TextEditingController _commentController = TextEditingController();
 
-  final double _inspectionFee = 200.0;
-  final double _estimatedMaterialCost = 450.0;
-  final _mockTechnician = {
-    'name': 'Somchai Rakdee',
-    'role': 'Senior Maintenance Specialist',
-    'rating': 4.9,
-    'repairs': 124,
-  };
-
   @override
   void initState() {
     super.initState();
@@ -93,12 +84,26 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
           ? jsonDecode(ratingRes.body)
           : null;
 
+      // ── โหลดข้อมูล technician ถ้ามีการ assign แล้ว ──────────────────────
+      Map<String, dynamic>? technicianData;
+      if (ticket.assignedToId != null) {
+        try {
+          final techRes = await http.get(
+            Uri.parse('${AppConfig.baseUrl}/users/${ticket.assignedToId}'),
+          );
+          if (techRes.statusCode == 200) {
+            technicianData = jsonDecode(techRes.body) as Map<String, dynamic>;
+          }
+        } catch (_) {}
+      }
+
       _streamController.add(
         _TrackingSnapshot(
           ticket: ticket,
           imageUrls: imageUrls,
           ratingScore: ratingData?['score'] as int?,
           ratingComment: ratingData?['comment'] as String?,
+          technicianData: technicianData,
         ),
       );
     } catch (_) {}
@@ -343,7 +348,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                 const SizedBox(height: 20),
                 _buildFeesCard(),
                 const SizedBox(height: 20),
-                _buildTechnicianCard(ticket),
+                _buildTechnicianCard(ticket, snap.technicianData),
                 if (ticket.isDone) ...[
                   const SizedBox(height: 20),
                   _buildRatingSection(snap.ratingScore, snap.ratingComment),
@@ -805,7 +810,9 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
 
   // ── 3. Fees Card ───────────────────────────────────────────────────────────
   Widget _buildFeesCard() {
-    final total = _inspectionFee + _estimatedMaterialCost;
+    const inspectionFee = 200.0;
+    const estimatedMaterialCost = 450.0;
+    const total = inspectionFee + estimatedMaterialCost;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: _cardDecoration(),
@@ -824,7 +831,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
           _buildFeeRow(
             Icons.search_outlined,
             'Initial Inspection Fee',
-            _inspectionFee,
+            inspectionFee,
             const Color(0xFFE8F3FE),
             const Color(0xFF137FEC),
           ),
@@ -832,7 +839,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
           _buildFeeRow(
             Icons.construction_outlined,
             'Estimated Material Costs',
-            _estimatedMaterialCost,
+            estimatedMaterialCost,
             const Color(0xFFF0FDF4),
             const Color(0xFF16A34A),
           ),
@@ -933,7 +940,10 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
   }
 
   // ── 4. Technician Card ─────────────────────────────────────────────────────
-  Widget _buildTechnicianCard(RepairTicket ticket) {
+  Widget _buildTechnicianCard(
+    RepairTicket ticket,
+    Map<String, dynamic>? techData,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: _cardDecoration(),
@@ -972,78 +982,116 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                     ],
                   ),
                 )
-              : Row(
+              : techData == null
+              // ── กำลังโหลดข้อมูลช่าง ────────────────────────────────────
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF137FEC),
+                      strokeWidth: 2,
+                    ),
+                  ),
+                )
+              // ── แสดงข้อมูลช่างจริง ──────────────────────────────────────
+              : _buildTechnicianInfo(techData),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTechnicianInfo(Map<String, dynamic> techData) {
+    final firstName = techData['first_name'] as String? ?? '';
+    final lastName = techData['last_name'] as String? ?? '';
+    final fullName = '$firstName $lastName'.trim();
+    final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
+    final imageUrl = techData['image_url'] as String?;
+    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+    final rating = techData['rating'];
+    final ratingDisplay = rating != null
+        ? (rating is double ? rating.toStringAsFixed(1) : rating.toString())
+        : null;
+
+    return Row(
+      children: [
+        // ── Avatar ──────────────────────────────────────────────────────
+        Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFF137FEC), width: 2),
+          ),
+          child: ClipOval(
+            child: hasImage
+                ? Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    key: ValueKey(imageUrl),
+                    errorBuilder: (_, __, ___) => _techInitialAvatar(initial),
+                  )
+                : _techInitialAvatar(initial),
+          ),
+        ),
+        const SizedBox(width: 14),
+
+        // ── Info ─────────────────────────────────────────────────────────
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                fullName.isNotEmpty ? fullName : 'Technician',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'Maintenance Technician',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+              if (ratingDisplay != null) ...[
+                const SizedBox(height: 6),
+                Row(
                   children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.grey.shade200,
-                      child: const Icon(
-                        Icons.person,
-                        size: 30,
-                        color: Color(0xFF94A3B8),
-                      ),
+                    const Icon(
+                      Icons.star_rounded,
+                      color: Colors.amber,
+                      size: 15,
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _mockTechnician['name'] as String,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E293B),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _mockTechnician['role'] as String,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                color: Colors.amber,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                '${_mockTechnician['rating']} (${_mockTechnician['repairs']} repairs)',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF64748B),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {},
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF137FEC),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.phone,
-                          color: Colors.white,
-                          size: 22,
-                        ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '$ratingDisplay / 5.0',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
-        ],
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _techInitialAvatar(String initial) {
+    return Container(
+      color: const Color(0xFFDBEAFE),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFF137FEC),
+        ),
       ),
     );
   }
@@ -1404,11 +1452,13 @@ class _TrackingSnapshot {
   final List<String> imageUrls;
   final int? ratingScore;
   final String? ratingComment;
+  final Map<String, dynamic>? technicianData;
 
   const _TrackingSnapshot({
     required this.ticket,
     required this.imageUrls,
     this.ratingScore,
     this.ratingComment,
+    this.technicianData,
   });
 }

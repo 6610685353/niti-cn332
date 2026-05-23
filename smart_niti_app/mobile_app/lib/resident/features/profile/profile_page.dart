@@ -1,11 +1,15 @@
 // lib/resident/features/profile/profile_page.dart
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import '../repair_history/repair_history_page.dart';
 import '../../core/app_config.dart';
+import '../../core/user_avatar_notifier.dart';
+import '../../../auth/login/login_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -17,9 +21,8 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
-  String? _error;
+  bool _isUploadingAvatar = false;
 
-  // Firebase Auth user
   User? get _firebaseUser => FirebaseAuth.instance.currentUser;
 
   @override
@@ -28,44 +31,247 @@ class _ProfilePageState extends State<ProfilePage> {
     _fetchUserData();
   }
 
+  // ── Auth headers ──────────────────────────────────────────────────────────
+
+  Future<Map<String, String>> _authHeaders() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return {};
+    final token = await user.getIdToken();
+    return {'Authorization': 'Bearer $token'};
+  }
+
+  // ── Fetch ─────────────────────────────────────────────────────────────────
+
   Future<void> _fetchUserData() async {
     setState(() {
       _isLoading = true;
-      _error = null;
     });
-
     try {
       final uid = _firebaseUser?.uid;
       if (uid == null) {
-        setState(() {
-          _error = 'ไม่พบข้อมูล User';
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
         return;
       }
-
-      final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/users/$uid'),
-      );
-
-      if (response.statusCode == 200) {
+      final res = await http.get(Uri.parse('${AppConfig.baseUrl}/users/$uid'));
+      if (res.statusCode == 200 && mounted) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
         setState(() {
-          _userData = jsonDecode(response.body);
+          _userData = data;
           _isLoading = false;
         });
+        // sync avatar notifier เพื่ออัพเดต HomeHeader
+        userAvatarNotifier.value = data['image_url'] as String? ?? '';
       } else {
-        setState(() {
-          _error = 'โหลดข้อมูลไม่สำเร็จ';
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
-    } catch (e) {
-      setState(() {
-        // ถ้า offline ให้แสดงข้อมูลจาก Firebase แทน
-        _isLoading = false;
-      });
+    } catch (_) {
+      setState(() => _isLoading = false);
     }
   }
+
+  // ── Avatar: pick → confirm dialog → upload ────────────────────────────────
+
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    // ── Confirm dialog ──────────────────────────────────────────────────
+    final confirmed = await _showConfirmAvatarDialog(picked.path);
+    if (confirmed != true) return;
+
+    await _uploadAvatar(File(picked.path));
+  }
+
+  Future<bool?> _showConfirmAvatarDialog(String imagePath) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'ใช้รูปนี้เป็นโปรไฟล์?',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Preview
+              CircleAvatar(
+                radius: 64,
+                backgroundImage: FileImage(File(imagePath)),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  // Cancel
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'ยกเลิก',
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Confirm
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        backgroundColor: const Color(0xFF137FEC),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'ยืนยัน',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _uploadAvatar(File file) async {
+    setState(() => _isUploadingAvatar = true);
+    try {
+      final headers = await _authHeaders();
+      if (headers.isEmpty) return;
+
+      final request =
+          http.MultipartRequest(
+              'PATCH',
+              Uri.parse('${AppConfig.baseUrl}/users/me'),
+            )
+            ..headers.addAll(headers)
+            ..files.add(await http.MultipartFile.fromPath('file', file.path));
+
+      final streamed = await request.send();
+      if (streamed.statusCode == 200) {
+        // refetch เพื่อได้ signed URL ใหม่ พร้อม sync notifier
+        await _fetchUserData();
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('อัปโหลดรูปไม่สำเร็จ กรุณาลองใหม่')),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('เกิดข้อผิดพลาด กรุณาลองใหม่')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingAvatar = false);
+    }
+  }
+
+  // ── Delete avatar ─────────────────────────────────────────────────────────
+
+  Future<void> _deleteAvatar() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'ลบรูปโปรไฟล์',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text('คุณต้องการลบรูปโปรไฟล์ใช่หรือไม่?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'ยกเลิก',
+              style: TextStyle(color: Color(0xFF64748B)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('ลบ', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isUploadingAvatar = true);
+    try {
+      final headers = await _authHeaders();
+      if (headers.isEmpty) return;
+
+      // เรียก DELETE /users/me/avatar เพื่อลบรูปโปรไฟล์
+      final res = await http.delete(
+        Uri.parse('${AppConfig.baseUrl}/users/me/avatar'),
+        headers: headers,
+      );
+
+      if (res.statusCode == 200 && mounted) {
+        setState(() => _userData = {...?_userData, 'image_url': null});
+        // sync notifier: "" = ไม่มีรูป → HomeHeader แสดง initial แทน
+        userAvatarNotifier.value = '';
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('ลบรูปไม่สำเร็จ กรุณาลองใหม่')),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('เกิดข้อผิดพลาด กรุณาลองใหม่')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingAvatar = false);
+    }
+  }
+
+  // ── Display helpers ───────────────────────────────────────────────────────
 
   String get _displayName {
     if (_userData != null) {
@@ -76,8 +282,16 @@ class _ProfilePageState extends State<ProfilePage> {
     return _firebaseUser?.displayName ?? 'User';
   }
 
+  String get _initial {
+    final name = _displayName.trim();
+    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+
   String get _email =>
       _firebaseUser?.email ?? _userData?['email'] ?? 'ไม่มีข้อมูล';
+
+  String get _building => _userData?['building'] ?? '';
+  String get _roomNo => _userData?['room_no'] ?? '';
 
   String get _memberSince {
     final createdAt = _userData?['created_at'];
@@ -103,6 +317,8 @@ class _ProfilePageState extends State<ProfilePage> {
       return '';
     }
   }
+
+  // ── Logout ────────────────────────────────────────────────────────────────
 
   Future<void> _handleLogout() async {
     final confirm = await showDialog<bool>(
@@ -138,11 +354,21 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+    if (confirm != true) return;
 
-    if (confirm == true) {
-      await FirebaseAuth.instance.signOut();
+    await FirebaseAuth.instance.signOut();
+    // reset avatar notifier
+    userAvatarNotifier.value = null;
+
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (_) => false,
+      );
     }
   }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -176,8 +402,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ---- 1. Profile Header ----
+  // ── 1. Profile Header ─────────────────────────────────────────────────────
+
   Widget _buildProfileHeader() {
+    final imageUrl = _userData?['image_url'] as String?;
+    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+
     return Column(
       children: [
         const Text(
@@ -186,34 +416,86 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         const SizedBox(height: 20),
 
-        // Avatar
+        // Avatar + action buttons
         Stack(
           children: [
+            // Avatar circle
             CircleAvatar(
               radius: 60,
-              backgroundColor: Colors.grey.shade200,
-              backgroundImage: _userData?['image_url'] != null
-                  ? NetworkImage(_userData!['image_url'])
-                  : null,
-              child: _userData?['image_url'] == null
-                  ? const Icon(Icons.person, size: 60, color: Color(0xFF94A3B8))
+              backgroundColor: const Color(0xFFDBEAFE),
+              backgroundImage: hasImage ? NetworkImage(imageUrl!) : null,
+              child: !hasImage
+                  ? Text(
+                      _initial,
+                      style: const TextStyle(
+                        fontSize: 42,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF137FEC),
+                      ),
+                    )
                   : null,
             ),
-            Positioned(
-              bottom: 0,
-              right: 5,
-              child: GestureDetector(
-                onTap: () {},
+
+            // Loading overlay
+            if (_isUploadingAvatar)
+              Positioned.fill(
                 child: Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF137FEC),
+                  decoration: BoxDecoration(
+                    color: Colors.black38,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.edit, color: Colors.white, size: 16),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  ),
                 ),
               ),
-            ),
+
+            // Edit (camera) button — bottom-right
+            if (!_isUploadingAvatar)
+              Positioned(
+                bottom: 0,
+                right: 5,
+                child: GestureDetector(
+                  onTap: _pickAndUploadAvatar,
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF137FEC),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
+
+            // Delete button — bottom-left (เฉพาะตอนมีรูป)
+            if (!_isUploadingAvatar && hasImage)
+              Positioned(
+                bottom: 0,
+                left: 5,
+                child: GestureDetector(
+                  onTap: _deleteAvatar,
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEF4444),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 15),
@@ -229,23 +511,29 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         const SizedBox(height: 8),
 
-        // Badges
+        // Badges — Building + Room No
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildBadge(
-              'Unit 402B',
-              const Color(0xFFDBEAFE),
-              const Color(0xFF137FEC),
-            ),
-            const SizedBox(width: 8),
-            _buildBadge(
-              'Verified',
-              const Color(0xFFFEE2E2),
-              const Color(0xFFEF4444),
-            ),
+            if (_building.isNotEmpty)
+              _buildBadge(
+                _building,
+                const Color(0xFFDBEAFE),
+                const Color(0xFF137FEC),
+                Icons.apartment_outlined,
+              ),
+            if (_building.isNotEmpty && _roomNo.isNotEmpty)
+              const SizedBox(width: 8),
+            if (_roomNo.isNotEmpty)
+              _buildBadge(
+                'Room $_roomNo',
+                const Color(0xFFDCFCE7),
+                const Color(0xFF16A34A),
+                Icons.door_front_door_outlined,
+              ),
           ],
         ),
+
         if (_memberSince.isNotEmpty) ...[
           const SizedBox(height: 10),
           Text(
@@ -257,7 +545,8 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ---- 2. Personal Details ----
+  // ── 2. Personal Details ───────────────────────────────────────────────────
+
   Widget _buildPersonalDetails() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,7 +582,8 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ---- 3. Activity History ----
+  // ── 3. Activity History ───────────────────────────────────────────────────
+
   Widget _buildActivityHistory() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,18 +597,17 @@ class _ProfilePageState extends State<ProfilePage> {
           Icons.build_outlined,
           'Repairs History',
           'View all repair requests',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const RepairHistoryPage()),
-            );
-          },
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const RepairHistoryPage()),
+          ),
         ),
       ],
     );
   }
 
-  // ---- 4. Logout Button ----
+  // ── 4. Logout ─────────────────────────────────────────────────────────────
+
   Widget _buildLogoutButton() {
     return SizedBox(
       width: double.infinity,
@@ -344,21 +633,34 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ---- Helper Widgets ----
-  Widget _buildBadge(String text, Color bgColor, Color textColor) {
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  Widget _buildBadge(
+    String text,
+    Color bgColor,
+    Color textColor,
+    IconData icon,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: textColor),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
