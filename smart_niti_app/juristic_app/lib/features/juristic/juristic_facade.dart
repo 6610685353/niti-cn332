@@ -37,6 +37,14 @@ class JuristicFacade {
     return TicketModel.fromJson(raw);
   }
 
+  // เพิ่มใน JuristicFacade ใต้ unassignTicket
+
+  Future<List<Map<String, dynamic>>> getTicketImages(int ticketId) =>
+      _api.getTicketImages(ticketId);
+
+  Future<String> getTicketImageSignedUrl(int ticketId, String filename) =>
+      _api.getTicketImageSignedUrl(ticketId, filename);
+
   // ─── Users ──────────────────────────────────────────────────────
   Future<Map<String, dynamic>> getUser(String uid) => _api.getUser(uid);
   Future<List<Map<String, dynamic>>> getTechnicians() => _api.getTechnicians();

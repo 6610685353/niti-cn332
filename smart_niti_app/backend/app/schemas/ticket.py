@@ -50,7 +50,7 @@ class TicketResponse(TicketBase):
     closed_at: Optional[datetime] = None
     
     # ดึงข้อมูลรูปภาพและเรตติ้งที่เกี่ยวข้องมาด้วย (ถ้ามี Relationship ใน Model)
-    # images: List[TicketImageResponse] = []
+    images: List[TicketImageResponse] = []
     # rating: Optional[RatingResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, Date, Time, DateTime, ForeignKey, Enum
+from sqlalchemy.orm import relationship
 from database import Base
 import datetime
 import enum
@@ -37,6 +38,7 @@ class TicketModel(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     closed_at = Column(DateTime, nullable=True)
+    images = relationship("TicketImageModel", backref="ticket", lazy="joined")
 
 class TicketImageModel(Base):
     __tablename__ = "ticket_images"

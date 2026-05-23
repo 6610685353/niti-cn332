@@ -59,6 +59,30 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  // api_service.dart — เพิ่มใต้ unassignTicket
+
+  Future<List<Map<String, dynamic>>> getTicketImages(int ticketId) async {
+    final headers = await getHeaders();
+    final res = await _client.get(
+      Uri.parse('$kBaseUrl/tickets/$ticketId/images'),
+      headers: headers,
+    );
+    _checkStatus(res);
+    final List<dynamic> data = jsonDecode(res.body);
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  Future<String> getTicketImageSignedUrl(int ticketId, String filename) async {
+    final headers = await getHeaders();
+    final res = await _client.get(
+      Uri.parse('$kBaseUrl/tickets/$ticketId/images/$filename'),
+      headers: headers,
+    );
+    _checkStatus(res);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    return data['signed_url'] as String;
+  }
+
   /// อัปเดต status ของ ticket
   Future<Map<String, dynamic>> updateTicketStatus(
     int ticketId,

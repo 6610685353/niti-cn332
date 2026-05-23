@@ -582,7 +582,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
               Icon(Icons.image_outlined, size: 44, color: Color(0xFFCBD5E1)),
               SizedBox(height: 8),
               Text(
-                'ไม่มีรูปภาพ',
+                'No picture',
                 style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
               ),
             ],

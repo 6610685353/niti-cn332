@@ -5,6 +5,10 @@ import 'package:juristic_app/features/juristic/juristic_facade.dart';
 import '../widgets/mini_stat_card.dart';
 import '../widgets/ticket_card.dart';
 import '../widgets/technician_row.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'dart:html' as html;
+import 'dart:ui_web' as ui_web;
 
 class TaskDispatchPage extends StatefulWidget {
   const TaskDispatchPage({super.key});
@@ -302,9 +306,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
               itemBuilder: (context, i) {
                 final ticket = _unassigned[i];
 
-                // 🌟 เช็คว่ามีรูปไหม (สมมติว่าใน TicketModel คุณใช้ชื่อตัวแปรว่า imageUrls)
-                final List<String> images = ticket.imageUrls ?? [];
-
                 return Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -329,14 +330,9 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                       });
                     },
 
-                    // 🌟 ส่งค่าให้ปุ่มรูปภาพ
-                    hasImages: images.isNotEmpty,
-                    onImageTap: () async {
-                      final headers = await _facade.getHeaders();
-                      if (context.mounted) {
-                        _showImageViewer(context, images, headers);
-                      }
-                    },
+                    // ✅ ใช้แบบนี้แทน onViewImage
+                    hasImages: ticket.imageFilenames.isNotEmpty,
+                    onImageTap: () => _showTicketImages(ticket),
                   ),
                 );
               },
@@ -393,14 +389,9 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     onTap: null,
                     onUnassign: () => _unassignTicket(ticket.id),
 
-                    // 🌟 ส่งค่าให้ปุ่มรูปภาพ
-                    hasImages: images.isNotEmpty,
-                    onImageTap: () async {
-                      final headers = await _facade.getHeaders();
-                      if (context.mounted) {
-                        _showImageViewer(context, images, headers);
-                      }
-                    },
+                    // ✅ ใช้แบบนี้แทน onViewImage
+                    hasImages: ticket.imageFilenames.isNotEmpty,
+                    onImageTap: () => _showTicketImages(ticket),
                   ),
                 );
               },
@@ -456,14 +447,8 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     isSelected: false,
                     onTap: null,
 
-                    // 🌟 ส่งค่าให้ปุ่มรูปภาพ
-                    hasImages: images.isNotEmpty,
-                    onImageTap: () async {
-                      final headers = await _facade.getHeaders();
-                      if (context.mounted) {
-                        _showImageViewer(context, images, headers);
-                      }
-                    },
+                    hasImages: ticket.imageFilenames.isNotEmpty,
+                    onImageTap: () => _showTicketImages(ticket),
                   ),
                 );
               },
@@ -703,93 +688,158 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
     );
   }
 
-  // ── UI Helper: สร้างหน้าต่างดูรูปภาพ (ปัดซ้าย-ขวาได้) ───────────────
-  void _showImageViewer(
-    BuildContext context,
-    List<String> imageUrls,
-    Map<String, String> headers,
-  ) {
+  Future<void> _showTicketImages(TicketModel ticket) async {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(16),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // กล่องแสดงรูปภาพ
-              Container(
-                height: 500,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: [
-                    Expanded(
-                      // 🌟 PageView ทำให้สามารถปัดซ้าย-ขวาได้
-                      child: PageView.builder(
-                        itemCount: imageUrls.length,
-                        itemBuilder: (context, index) {
-                          return InteractiveViewer(
-                            // 🌟 ทำให้ใช้นิ้วซูมรูปได้
-                            child: Image.network(
-                              imageUrls[index],
-                              headers: headers, // สำคัญมาก ต้องแนบ Token
-                              fit: BoxFit.contain,
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return const Center(
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                      ),
-                                    );
-                                  },
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Center(
-                                  child: Icon(
-                                    Icons.broken_image,
-                                    color: Colors.white,
-                                    size: 50,
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // 1. ดึง metadata รายการรูปทั้งหมด
+      final images = await _facade.getTicketImages(ticket.id);
+
+      if (mounted) Navigator.of(context).pop();
+      if (!mounted) return;
+
+      if (images.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ไม่มีรูปภาพสำหรับ ticket นี้')),
+        );
+        return;
+      }
+
+      // 2. ดึง signed URL แต่ละรูป (ใช้ filename จาก image_url เช่น "1/ticket_1_abc.jpg" → "ticket_1_abc.jpg")
+      final signedUrls = await Future.wait(
+        images.map((img) async {
+          final filename = (img['image_url'] as String).split('/').last;
+          return _facade.getTicketImageSignedUrl(ticket.id, filename);
+        }),
+      );
+
+      // 3. เปิด dialog แสดงรูป
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 12, 0),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.image_outlined,
+                        size: 20,
+                        color: AppColors.primaryBlue,
                       ),
-                    ),
-                    // จุดไข่ปลาบอกจำนวนรูปภาพ (ถ้ามีมากกว่า 1 รูป)
-                    if (imageUrls.length > 1)
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: Text(
-                          "ปัดซ้าย-ขวา เพื่อดูรูปถัดไป",
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 12,
+                          ticket.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                  ],
+                      IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: const Icon(Icons.close, size: 20),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              // ปุ่มกากบาทปิด Popup มุมขวาบน
-              Positioned(
-                top: 0,
-                right: 0,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                  onPressed: () => Navigator.of(context).pop(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                  child: Text(
+                    '${signedUrls.length} picture(s)',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  ),
                 ),
-              ),
-            ],
+                const Divider(height: 1),
+                Flexible(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    shrinkWrap: true,
+                    itemCount: signedUrls.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (_, i) => ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        signedUrls[i], // ✅ ใช้ signed URL จาก Supabase โดยตรง
+                        fit: BoxFit.contain,
+                        loadingBuilder: (_, child, progress) {
+                          if (progress == null) return child;
+                          return Container(
+                            height: 180,
+                            color: Colors.grey.shade100,
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => Container(
+                          height: 120,
+                          color: Colors.grey.shade100,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.broken_image_outlined,
+                                size: 36,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'โหลดรูปไม่ได้',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Close'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('โหลดรูปภาพไม่ได้: $e'),
+            backgroundColor: Colors.red,
           ),
         );
-      },
-    );
+      }
+    }
   }
 }

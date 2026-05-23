@@ -23,7 +23,6 @@ class _NotificationBellState extends State<NotificationBell> {
     _loadNotifications();
   }
 
-  // โหลดงานที่เสร็จแล้ว และกรองอันที่เคยกดเคลียร์ทิ้งไป
   Future<void> _loadNotifications() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
@@ -33,7 +32,6 @@ class _NotificationBellState extends State<NotificationBell> {
       final prefs = await SharedPreferences.getInstance();
       final clearedIds = prefs.getStringList('cleared_notifications') ?? [];
 
-      // กรองเอาเฉพาะ TicketStatus.done และยังไม่เคยถูก Clear
       final doneTickets = allTickets.where((t) {
         return t.status == TicketStatus.done &&
             !clearedIds.contains(t.id.toString());
@@ -50,31 +48,216 @@ class _NotificationBellState extends State<NotificationBell> {
     }
   }
 
-  // ฟังก์ชันเคลียร์การแจ้งเตือนทั้งหมด
   Future<void> _clearAllNotifications() async {
     final prefs = await SharedPreferences.getInstance();
     final clearedIds = prefs.getStringList('cleared_notifications') ?? [];
-
-    // เอา ID ของโนติปัจจุบัน ไปรวมกับที่เคยเคลียร์ไว้แล้ว
     final newClearedIds = _notifications.map((t) => t.id.toString()).toList();
     clearedIds.addAll(newClearedIds);
-
     await prefs.setStringList('cleared_notifications', clearedIds);
-
-    setState(() {
-      _notifications.clear();
-    });
+    setState(() => _notifications.clear());
   }
 
-  // เปิด Popup รายการแจ้งเตือน
+  // ── Ticket Detail Dialog ──────────────────────────────────────
+
+  void _showTicketDetail(BuildContext context, TicketModel ticket) {
+    // ปิด notification panel ก่อน
+    Navigator.of(context).pop();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header ──────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 20, 12, 16),
+                decoration: BoxDecoration(
+                  color: AppColors.successGreen.withOpacity(0.06),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.successGreen.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_circle,
+                        color: AppColors.successGreen,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'งานเสร็จสิ้น',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.successGreen,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            ticket.title,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      icon: const Icon(Icons.close, size: 20),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              // ── Detail Rows ──────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    _detailRow(
+                      Icons.location_on_outlined,
+                      'ห้อง / ตำแหน่ง',
+                      ticket.inUnitLocation,
+                    ),
+                    const SizedBox(height: 12),
+                    _detailRow(
+                      Icons.build_outlined,
+                      'หมวดหมู่',
+                      ticket.categoryLabel,
+                      valueColor: ticket.categoryTagColor,
+                    ),
+                    if (ticket.detailDesc != null &&
+                        ticket.detailDesc!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _detailRow(
+                        Icons.notes_outlined,
+                        'รายละเอียด',
+                        ticket.detailDesc!,
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    _detailRow(
+                      Icons.calendar_today_outlined,
+                      'วันที่นัดหมาย',
+                      '${ticket.targetDate}  ${ticket.startTime} – ${ticket.endTime}',
+                    ),
+                    if (ticket.closedAt != null) ...[
+                      const SizedBox(height: 12),
+                      _detailRow(
+                        Icons.task_alt_outlined,
+                        'เสร็จเมื่อ',
+                        _formatDateTime(ticket.closedAt!),
+                        valueColor: AppColors.successGreen,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              // ── Footer ───────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Ticket #${ticket.id}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('ปิด'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: Colors.grey.shade400),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: valueColor ?? Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDateTime(DateTime dt) {
+    final local = dt.toLocal();
+    return '${local.day}/${local.month}/${local.year}  ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+  }
+
+  // ── Notification Panel ────────────────────────────────────────
+
   void _showNotificationPanel(BuildContext context) {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
-      barrierColor: Colors.transparent, // ไม่ต้องทำพื้นหลังมืด
+      barrierColor: Colors.transparent,
       transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (context, animation, secondaryAnimation) {
+      pageBuilder: (ctx, animation, secondaryAnimation) {
         return SafeArea(
           child: Align(
             alignment: Alignment.topRight,
@@ -83,10 +266,8 @@ class _NotificationBellState extends State<NotificationBell> {
               child: Material(
                 color: Colors.transparent,
                 child: Container(
-                  width: 350,
-                  constraints: const BoxConstraints(
-                    maxHeight: 400,
-                  ), // ล็อกความสูงเพื่อทำ Scroll
+                  width: 360,
+                  constraints: const BoxConstraints(maxHeight: 480),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -102,33 +283,63 @@ class _NotificationBellState extends State<NotificationBell> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Header & Clear Button
+                      // ── Header ──────────────────────────────
                       Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              "Notifications",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Row(
+                              children: [
+                                const Text(
+                                  "Notifications",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (_notifications.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.errorRed,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '${_notifications.length}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                             if (_notifications.isNotEmpty)
                               InkWell(
                                 onTap: () {
                                   _clearAllNotifications();
-                                  Navigator.of(
-                                    context,
-                                  ).pop(); // ปิด Popup หลังกดเคลียร์
+                                  Navigator.of(ctx).pop();
                                 },
-                                child: const Text(
-                                  "Clear All",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.primaryBlue,
-                                    fontWeight: FontWeight.bold,
+                                borderRadius: BorderRadius.circular(6),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  child: const Text(
+                                    "Clear All",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.primaryBlue,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -137,18 +348,18 @@ class _NotificationBellState extends State<NotificationBell> {
                       ),
                       const Divider(height: 1),
 
-                      // Scrollable List
+                      // ── List ─────────────────────────────────
                       Flexible(
                         child: _isLoading
                             ? const Padding(
-                                padding: EdgeInsets.all(32.0),
+                                padding: EdgeInsets.all(32),
                                 child: Center(
                                   child: CircularProgressIndicator(),
                                 ),
                               )
                             : _notifications.isEmpty
                             ? Padding(
-                                padding: const EdgeInsets.all(32.0),
+                                padding: const EdgeInsets.all(32),
                                 child: Center(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
@@ -172,41 +383,11 @@ class _NotificationBellState extends State<NotificationBell> {
                             : ListView.separated(
                                 shrinkWrap: true,
                                 itemCount: _notifications.length,
-                                separatorBuilder: (context, index) =>
+                                separatorBuilder: (_, __) =>
                                     const Divider(height: 1),
-                                itemBuilder: (context, index) {
-                                  final ticket = _notifications[index];
-                                  return ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: AppColors.successGreen
-                                          .withOpacity(0.1),
-                                      child: const Icon(
-                                        Icons.check_circle,
-                                        color: AppColors.successGreen,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    title: Text(
-                                      "งานซ่อม ${ticket.inUnitLocation} เสร็จสิ้น",
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      ticket.title,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 4,
-                                    ),
-                                  );
+                                itemBuilder: (_, i) {
+                                  final ticket = _notifications[i];
+                                  return _buildNotificationItem(ctx, ticket);
                                 },
                               ),
                       ),
@@ -221,16 +402,116 @@ class _NotificationBellState extends State<NotificationBell> {
     );
   }
 
-  @override
+  Widget _buildNotificationItem(BuildContext ctx, TicketModel ticket) {
+    return InkWell(
+      onTap: () => _showTicketDetail(ctx, ticket),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── สี indicator ด้านซ้าย ──
+            Container(
+              width: 3,
+              height: 52,
+              decoration: BoxDecoration(
+                color: AppColors.successGreen,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // ── Icon ──
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.successGreen.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle,
+                color: AppColors.successGreen,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 10),
+
+            // ── Text ──
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    ticket.title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 11,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        ticket.inUnitLocation,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: ticket.categoryTagBgColor,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          ticket.categoryLabel,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: ticket.categoryTagColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    ticket.timeAgo,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Arrow ──
+            Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade300),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      // 🌟 1. เติมคำว่า async เข้าไปตรงนี้
       onPressed: () async {
-        // 🌟 2. ใส่ await เพื่อบังคับให้รอโหลดข้อมูลจากหลังบ้านให้เสร็จก่อน
         await _loadNotifications();
-
-        // 🌟 3. โหลดเสร็จเรียบร้อย ค่อยสั่งให้ Popup เด้งขึ้นมา (จะไม่หมุนค้างแล้ว!)
         if (mounted) {
           _showNotificationPanel(context);
         }

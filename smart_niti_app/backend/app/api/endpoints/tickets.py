@@ -128,6 +128,28 @@ def cancel_ticket(
 
 # ── Ticket Images ──────────────────────────────────────────────────────────────
 
+# เพิ่มใน tickets.py (ก่อน GET /{ticket_id}/images/{filename})
+@router.get("/{ticket_id}/images", response_model=List[schemas_ticket.TicketImageResponse])
+def list_ticket_images(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    ticket = db.query(models_ticket.TicketModel).filter(
+        models_ticket.TicketModel.id == ticket_id
+    ).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    is_staff = current_user.role in [models_user.UserRole.juristic, models_user.UserRole.technician]
+    is_owner = ticket.req_user_id == current_user.uid
+    if not (is_staff or is_owner):
+        raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์เข้าถึง")
+
+    return db.query(models_ticket.TicketImageModel).filter(
+        models_ticket.TicketImageModel.ticket_id == ticket_id
+    ).all()
+
 @router.get("/{ticket_id}/images/{filename}")
 def get_ticket_image(
     ticket_id: int,
