@@ -94,7 +94,7 @@ Iteration 7: [Smart Niti Iteration 7 (Implement Plan)](https://www.canva.com/des
 
 - [Resident (ลูกบ้าน) – Application Live Demo](https://drive.google.com/drive/folders/1z7impwBif7HZRWsYC_VMSHCZ1VWik6bP)
 
-- [Technician (ข่าง) – Application Live Demo](https://drive.google.com/file/d/1Nnr4fpn-csTD8xransCy42NKI4lnaGGQ/view?usp=sharing)
+- [Technician (ข่าง) – Application Live Demo](https://drive.google.com/file/d/1Nnr4fpn-csTD8xransCy42NKI4lnaGGQ/view?usp=drive_link)
 
 - [Juristic (นิติบุคคล) – Application Live Demo](https://drive.google.com/file/d/10gJiyqQ8gKgFf8Giu7AiGaH-sEo27X4V/view?usp=sharing)
 
