@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import '../repair_history/models/repair_ticket_model.dart';
 import '../../core/app_config.dart';
 
@@ -53,10 +54,16 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
   Future<void> _fetchAndEmit() async {
     if (_streamController.isClosed) return;
     try {
+      // ดึง Firebase ID Token สำหรับ endpoint ที่ต้องการ Auth
+      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (idToken == null) return;
+      final authHeaders = {'Authorization': 'Bearer $idToken'};
+
       final results = await Future.wait([
         http.get(Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}')),
         http.get(
           Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}/images'),
+          headers: authHeaders,
         ),
         http.get(
           Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}/rating'),
@@ -73,12 +80,30 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
 
       final ticket = RepairTicket.fromJson(jsonDecode(ticketRes.body));
 
-      final imageUrls = imagesRes.statusCode == 200
-          ? (jsonDecode(imagesRes.body) as List)
-                .map((e) => '${AppConfig.baseUrl}${e['image_url']}')
-                .cast<String>()
-                .toList()
-          : <String>[];
+      // ── สร้าง Signed URL ทีละรูปจาก GET /tickets/{id}/images/{filename} ──
+      final imageUrls = <String>[];
+      if (imagesRes.statusCode == 200) {
+        final imageList = jsonDecode(imagesRes.body) as List;
+        for (final img in imageList) {
+          // image_url เก็บเป็น "{ticket_id}/{filename}" เช่น "3/ticket_3_abc.jpg"
+          final storedPath = img['image_url'] as String? ?? '';
+          final filename = storedPath.split('/').last;
+          if (filename.isEmpty) continue;
+          try {
+            final signedRes = await http.get(
+              Uri.parse(
+                '${AppConfig.baseUrl}/tickets/${widget.ticketId}/images/$filename',
+              ),
+              headers: authHeaders,
+            );
+            if (signedRes.statusCode == 200) {
+              final body = jsonDecode(signedRes.body);
+              final url = body['signed_url'] as String?;
+              if (url != null && url.isNotEmpty) imageUrls.add(url);
+            }
+          } catch (_) {}
+        }
+      }
 
       final ratingData = ratingRes.statusCode == 200
           ? jsonDecode(ratingRes.body)
