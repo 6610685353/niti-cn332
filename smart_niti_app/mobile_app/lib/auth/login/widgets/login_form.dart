@@ -45,7 +45,7 @@ class _LoginFormState extends State<LoginForm> {
 
         // ================= USERNAME =================
         const Text(
-          'Username/Email',
+          'Email',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
         ),
         const SizedBox(height: 8),

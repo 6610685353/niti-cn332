@@ -562,11 +562,6 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               _buildListTile(Icons.email_outlined, 'Email', _email),
               const Divider(height: 1, indent: 70),
-              _buildListTile(
-                Icons.phone_android_outlined,
-                'Phone Number',
-                _firebaseUser?.phoneNumber ?? '(+66) 00-000-0000',
-              ),
               if (_userData?['role'] != null) ...[
                 const Divider(height: 1, indent: 70),
                 _buildListTile(

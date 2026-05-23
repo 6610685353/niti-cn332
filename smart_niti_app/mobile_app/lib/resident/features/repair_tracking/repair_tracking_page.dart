@@ -54,7 +54,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
   Future<void> _fetchAndEmit() async {
     if (_streamController.isClosed) return;
     try {
-      // ดึง Firebase ID Token สำหรับ endpoint ที่ต้องการ Auth
+      // ดึง Firebase ID Token สำหรับ endpoint ที่ต้องการ auth
       final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
       if (idToken == null) return;
       final authHeaders = {'Authorization': 'Bearer $idToken'};
@@ -80,12 +80,13 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
 
       final ticket = RepairTicket.fromJson(jsonDecode(ticketRes.body));
 
-      // ── สร้าง Signed URL ทีละรูปจาก GET /tickets/{id}/images/{filename} ──
+      // ── ดึง signed URL ทีละรูปจาก GET /tickets/{id}/images/{filename} ──
+      // image_url ใน DB เก็บเป็น "{ticket_id}/{filename}" เช่น "3/ticket_3_abc.jpg"
+      // ต้องเรียก endpoint นี้เพื่อให้ backend สร้าง signed URL จาก Supabase
       final imageUrls = <String>[];
       if (imagesRes.statusCode == 200) {
         final imageList = jsonDecode(imagesRes.body) as List;
         for (final img in imageList) {
-          // image_url เก็บเป็น "{ticket_id}/{filename}" เช่น "3/ticket_3_abc.jpg"
           final storedPath = img['image_url'] as String? ?? '';
           final filename = storedPath.split('/').last;
           if (filename.isEmpty) continue;
@@ -97,8 +98,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
               headers: authHeaders,
             );
             if (signedRes.statusCode == 200) {
-              final body = jsonDecode(signedRes.body);
-              final url = body['signed_url'] as String?;
+              final url = jsonDecode(signedRes.body)['signed_url'] as String?;
               if (url != null && url.isNotEmpty) imageUrls.add(url);
             }
           } catch (_) {}
@@ -278,8 +278,13 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
 
     setState(() => _isCancelling = true);
     try {
+      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (idToken == null)
+        throw Exception('ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่');
+
       final res = await http.patch(
         Uri.parse('${AppConfig.baseUrl}/tickets/${widget.ticketId}/cancel'),
+        headers: {'Authorization': 'Bearer $idToken'},
       );
 
       if (!mounted) return;
@@ -370,8 +375,6 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                   const SizedBox(height: 20),
                 ],
                 _buildTicketInfoCard(ticket, snap.imageUrls),
-                const SizedBox(height: 20),
-                _buildFeesCard(),
                 const SizedBox(height: 20),
                 _buildTechnicianCard(ticket, snap.technicianData),
                 if (ticket.isDone) ...[
@@ -826,137 +829,6 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
               fontWeight: FontWeight.bold,
               color: Color(0xFF1E293B),
               height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── 3. Fees Card ───────────────────────────────────────────────────────────
-  Widget _buildFeesCard() {
-    const inspectionFee = 200.0;
-    const estimatedMaterialCost = 450.0;
-    const total = inspectionFee + estimatedMaterialCost;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: _cardDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Service Fee & Costs',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildFeeRow(
-            Icons.search_outlined,
-            'Initial Inspection Fee',
-            inspectionFee,
-            const Color(0xFFE8F3FE),
-            const Color(0xFF137FEC),
-          ),
-          const SizedBox(height: 10),
-          _buildFeeRow(
-            Icons.construction_outlined,
-            'Estimated Material Costs',
-            estimatedMaterialCost,
-            const Color(0xFFF0FDF4),
-            const Color(0xFF16A34A),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFDBEAFE),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Total Estimated Cost',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E3A5F),
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  '฿${total.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF137FEC),
-                    fontSize: 18,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: const [
-              Icon(Icons.info_outline, size: 11, color: Color(0xFF94A3B8)),
-              SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  'Final costs may vary based on actual work performed.',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF94A3B8),
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeeRow(
-    IconData icon,
-    String label,
-    double amount,
-    Color iconBg,
-    Color iconColor,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-            child: Icon(icon, size: 15, color: iconColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Color(0xFF334155),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Text(
-            '฿${amount.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
             ),
           ),
         ],

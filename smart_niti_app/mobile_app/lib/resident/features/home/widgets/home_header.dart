@@ -107,43 +107,6 @@ class _HomeHeaderState extends State<HomeHeader> {
               ],
             ),
           ),
-
-          // ── Notification button ───────────────────────────────────────
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 42,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: const Color(0xFFF1F5F9), width: 1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.notifications_outlined),
-                  onPressed: widget.onNotificationTap,
-                  iconSize: 24,
-                  padding: EdgeInsets.zero,
-                  color: const Color(0xFF334155),
-                ),
-              ),
-              if (widget.hasNotification)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    width: 9,
-                    height: 9,
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                  ),
-                ),
-            ],
-          ),
         ],
       ),
     );

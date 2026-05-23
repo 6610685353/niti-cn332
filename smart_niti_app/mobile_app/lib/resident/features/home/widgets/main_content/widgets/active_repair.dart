@@ -571,7 +571,7 @@ class _StatusBadge extends StatelessWidget {
       case TicketStatus.assigned:
         bg = const Color(0xFFDBEAFE);
         fg = const Color(0xFF2563EB);
-        label = 'On Way';
+        label = 'assigned';
         break;
       default:
         bg = const Color(0xFFF1F5F9);

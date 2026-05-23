@@ -6,3 +6,4 @@ implementation_plan.md
 *smart_niti_app/backend/.venv
 firebase-credentials.json
 .DS_Store
+*.zip
