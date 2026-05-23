@@ -163,7 +163,7 @@ def get_ticket_image(
             path=file_path, 
             expires_in=300
         )
-        return RedirectResponse(url=response["signedUrl"])
+        return {"signed_url": response["signedUrl"]}  # ✅ ส่ง URL กลับแทน
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating URL: {str(e)}")
 
@@ -184,7 +184,10 @@ async def upload_ticket_image(
         supabase.storage.from_("ticket-images").upload(
             path=file_path,
             file=file_bytes,
-            file_options={"content-type": file.content_type}
+            file_options={
+                "content-type": file.content_type,
+                "content-disposition": "inline" 
+            }
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"อัปโหลดรูปล้มเหลว: {str(e)}")

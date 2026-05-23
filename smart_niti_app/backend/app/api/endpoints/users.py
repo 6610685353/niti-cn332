@@ -41,7 +41,10 @@ async def create_user(
             supabase.storage.from_("profile_image").upload(
                 path=image_path,
                 file=file_bytes,
-                file_options={"content-type": file.content_type}
+                file_options={
+                    "content-type": file.content_type,
+                    "content-disposition": "inline"
+                }
             )
 
         db_user = models_user.UserModel(
