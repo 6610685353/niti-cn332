@@ -11,128 +11,10 @@ from core.supabase_client import supabase
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.post("/")
-async def create_user(
-    email: str = Form(...),
-    password: str = Form(...),
-    first_name: str = Form(...),
-    last_name: str = Form(...),
-    role: models_user.UserRole = Form(...),
-    room_no: Optional[str] = Form(None),
-    building: Optional[str] = Form(None),
-    file: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    if current_user.role != models_user.UserRole.juristic:
-        raise HTTPException(
-            status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถสร้างผู้ใช้งานได้"
-        )
-
-    try:
-        firebase_user = auth.create_user(email=email, password=password)
-        image_path = None
-
-        if file:
-            ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "jpg"
-            filename = f"profile_{firebase_user.uid}.{ext}"
-            image_path = f"{firebase_user.uid}/{filename}"
-
-            file_bytes = await file.read()
-            supabase.storage.from_("profile_image").upload(
-                path=image_path,
-                file=file_bytes,
-                file_options={
-                    "content-type": file.content_type,
-                    "content-disposition": "inline",
-                },
-            )
-
-        db_user = models_user.UserModel(
-            uid=firebase_user.uid,
-            first_name=first_name,
-            last_name=last_name,
-            role=role,
-            image_url=image_path,
-        )
-        db.add(db_user)
-        db.flush()
-
-        if role == models_user.UserRole.resident:
-            if not room_no or not building:
-                raise HTTPException(
-                    status_code=400,
-                    detail="room_no and building are required for resident role",
-                )
-            db_resident = models_user.ResidentModel(
-                uid=firebase_user.uid,
-                room_no=room_no,
-                building=building,
-            )
-            db.add(db_resident)
-
-        elif role == models_user.UserRole.technician:
-            db_tech = models_user.TechnicianModel(uid=firebase_user.uid, rating=0.0)
-            db.add(db_tech)
-
-        db.commit()
-        db.refresh(db_user)
-
-        return db_user
-    except auth.EmailAlreadyExistsError:
-        raise HTTPException(status_code=409, detail="This Email is already exist")
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.delete("/{uid}")
-def delete_user(
-    uid: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)
-):
-    if current_user.role != models_user.UserRole.juristic:
-        raise HTTPException(
-            status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถลบผู้ใช้งานได้"
-        )
-
-    db_user = (
-        db.query(models_user.UserModel).filter(models_user.UserModel.uid == uid).first()
-    )
-
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found.")
-
-    image_to_delete = db_user.image_url
-
-    try:
-        db.delete(db_user)
-        db.commit()
-
-        try:
-            auth.delete_user(uid)
-        except auth.UserNotFoundError:
-            pass
-
-        if image_to_delete:
-            try:
-                supabase.storage.from_("profile_image").remove([image_to_delete])
-            except Exception:
-                pass
-
-        return {"message": f"User {uid} deleted successfully."}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/check-email")
-def check_email_exists(email: str):
-    """เช็คว่า email นี้มีในระบบ Firebase Auth แล้วหรือยัง"""
-    try:
-        auth.get_user_by_email(email)
-        return {"exists": True}
-    except auth.UserNotFoundError:
-        return {"exists": False}
+# ══════════════════════════════════════════════════════════════════════════════
+# NOTE: Routes with /me/* MUST come before /{uid} to avoid FastAPI
+#       treating "me" as a uid path parameter.
+# ══════════════════════════════════════════════════════════════════════════════
 
 
 @router.patch("/me")
@@ -149,7 +31,6 @@ async def update_self_profile(
         .filter(models_user.UserModel.uid == current_user.uid)
         .first()
     )
-
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -193,9 +74,104 @@ async def update_self_profile(
     return db_user
 
 
+@router.post("/me/avatar")
+async def upload_self_avatar(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """อัปโหลด/เปลี่ยนรูปโปรไฟล์ตัวเอง — Flutter UserService.uploadAvatar เรียก endpoint นี้"""
+    db_user = (
+        db.query(models_user.UserModel)
+        .filter(models_user.UserModel.uid == current_user.uid)
+        .first()
+    )
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # ลบรูปเก่าก่อน (ถ้ามี)
+    if db_user.image_url:
+        try:
+            supabase.storage.from_("profile_image").remove([db_user.image_url])
+        except Exception:
+            pass
+
+    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "jpg"
+    filename = f"profile_{current_user.uid}.{ext}"
+    image_path = f"{current_user.uid}/{filename}"
+
+    file_bytes = await file.read()
+    supabase.storage.from_("profile_image").upload(
+        path=image_path,
+        file=file_bytes,
+        file_options={"content-type": file.content_type, "upsert": "true"},
+    )
+    db_user.image_url = image_path
+    db.commit()
+    db.refresh(db_user)
+
+    # คืน signed URL ทันที
+    signed_url = None
+    try:
+        res = supabase.storage.from_("profile_image").create_signed_url(
+            path=image_path, expires_in=3600
+        )
+        signed_url = res["signedUrl"]
+    except Exception:
+        pass
+
+    return {
+        "uid": db_user.uid,
+        "first_name": db_user.first_name,
+        "last_name": db_user.last_name,
+        "role": db_user.role,
+        "status": db_user.status,
+        "image_url": signed_url,
+        "created_at": db_user.created_at,
+        "updated_at": db_user.updated_at,
+    }
+
+
+@router.delete("/me/avatar")
+def delete_self_avatar(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """ลบรูปโปรไฟล์ของตัวเอง"""
+    db_user = (
+        db.query(models_user.UserModel)
+        .filter(models_user.UserModel.uid == current_user.uid)
+        .first()
+    )
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not db_user.image_url:
+        raise HTTPException(status_code=404, detail="No avatar to delete")
+
+    try:
+        supabase.storage.from_("profile_image").remove([db_user.image_url])
+    except Exception:
+        pass
+
+    db_user.image_url = None
+    db.commit()
+    return {"message": "Avatar deleted successfully"}
+
+
+# ── Check email (ต้องอยู่ก่อน /{uid} ด้วย) ────────────────────────────────────
+@router.get("/check-email")
+def check_email_exists(email: str):
+    try:
+        auth.get_user_by_email(email)
+        return {"exists": True}
+    except auth.UserNotFoundError:
+        return {"exists": False}
+
+
+# ── List users (GET /) ────────────────────────────────────────────────────────
 @router.get("/", response_model=List[schemas_user.UserResponse])
 def list_users(
-    role: Optional[str] = Query(None, description="filter by role e.g. technician"),
+    role: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
@@ -221,12 +197,10 @@ def list_users(
             models_user.UserModel.uid == models_user.TechnicianModel.uid,
         )
     )
-
     if role:
         query = query.filter(models_user.UserModel.role == role)
 
     results = query.all()
-
     formatted_users = []
     for user, room_no, building, rating in results:
         signed_image_url = None
@@ -239,22 +213,96 @@ def list_users(
             except Exception:
                 pass
 
-        user_dict = {
-            "uid": user.uid,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "role": user.role,
-            "status": user.status,
-            "image_url": signed_image_url,
-            "created_at": user.created_at,
-            "updated_at": user.updated_at,
-            "room_no": room_no,
-            "building": building,
-            "rating": rating,
-        }
-        formatted_users.append(user_dict)
-
+        formatted_users.append(
+            {
+                "uid": user.uid,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "role": user.role,
+                "status": user.status,
+                "image_url": signed_image_url,
+                "created_at": user.created_at,
+                "updated_at": user.updated_at,
+                "room_no": room_no,
+                "building": building,
+                "rating": rating,
+            }
+        )
     return formatted_users
+
+
+# ── Create user (POST /) ──────────────────────────────────────────────────────
+@router.post("/")
+async def create_user(
+    email: str = Form(...),
+    password: str = Form(...),
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    role: models_user.UserRole = Form(...),
+    room_no: Optional[str] = Form(None),
+    building: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    if current_user.role != models_user.UserRole.juristic:
+        raise HTTPException(
+            status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถสร้างผู้ใช้งานได้"
+        )
+
+    try:
+        firebase_user = auth.create_user(email=email, password=password)
+        image_path = None
+
+        if file:
+            ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "jpg"
+            filename = f"profile_{firebase_user.uid}.{ext}"
+            image_path = f"{firebase_user.uid}/{filename}"
+            file_bytes = await file.read()
+            supabase.storage.from_("profile_image").upload(
+                path=image_path,
+                file=file_bytes,
+                file_options={
+                    "content-type": file.content_type,
+                    "content-disposition": "inline",
+                },
+            )
+
+        db_user = models_user.UserModel(
+            uid=firebase_user.uid,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            image_url=image_path,
+        )
+        db.add(db_user)
+        db.flush()
+
+        if role == models_user.UserRole.resident:
+            if not room_no or not building:
+                raise HTTPException(
+                    status_code=400,
+                    detail="room_no and building are required for resident role",
+                )
+            db.add(
+                models_user.ResidentModel(
+                    uid=firebase_user.uid, room_no=room_no, building=building
+                )
+            )
+        elif role == models_user.UserRole.technician:
+            db.add(models_user.TechnicianModel(uid=firebase_user.uid, rating=0.0))
+
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except auth.EmailAlreadyExistsError:
+        raise HTTPException(status_code=409, detail="This Email is already exist")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ── /{uid} routes — ต้องอยู่หลังสุดเสมอ ──────────────────────────────────────
 
 
 @router.get("/{uid}", response_model=schemas_user.UserResponse)
@@ -283,7 +331,6 @@ def get_user(uid: str, db: Session = Depends(get_db)):
         if resident_info:
             user.room_no = resident_info.room_no
             user.building = resident_info.building
-
     elif user.role == models_user.UserRole.technician:
         tech_info = (
             db.query(models_user.TechnicianModel)
@@ -309,7 +356,6 @@ def update_user_by_admin(
     db_user = (
         db.query(models_user.UserModel).filter(models_user.UserModel.uid == uid).first()
     )
-
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -331,28 +377,35 @@ def update_user_by_admin(
     return db_user
 
 
-@router.delete("/me/avatar")
-def delete_self_avatar(
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+@router.delete("/{uid}")
+def delete_user(
+    uid: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)
 ):
-    """ลบรูปโปรไฟล์ของตัวเอง — ลบไฟล์จาก Supabase แล้ว set image_url = NULL"""
+    if current_user.role != models_user.UserRole.juristic:
+        raise HTTPException(
+            status_code=403, detail="เฉพาะ Juristic เท่านั้นที่สามารถลบผู้ใช้งานได้"
+        )
+
     db_user = (
-        db.query(models_user.UserModel)
-        .filter(models_user.UserModel.uid == current_user.uid)
-        .first()
+        db.query(models_user.UserModel).filter(models_user.UserModel.uid == uid).first()
     )
     if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found.")
 
-    if not db_user.image_url:
-        raise HTTPException(status_code=404, detail="No avatar to delete")
-
+    image_to_delete = db_user.image_url
     try:
-        supabase.storage.from_("profile_image").remove([db_user.image_url])
-    except Exception:
-        pass  # ลบ storage ไม่ได้ก็ไม่ block — ยังต้อง clear DB
-
-    db_user.image_url = None
-    db.commit()
-    return {"message": "Avatar deleted successfully"}
+        db.delete(db_user)
+        db.commit()
+        try:
+            auth.delete_user(uid)
+        except auth.UserNotFoundError:
+            pass
+        if image_to_delete:
+            try:
+                supabase.storage.from_("profile_image").remove([image_to_delete])
+            except Exception:
+                pass
+        return {"message": f"User {uid} deleted successfully."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

@@ -8,10 +8,16 @@ class EvidenceCard extends StatefulWidget {
   final bool isReadOnly;
   final int ticketId;
 
+  /// 'resident' = รูปจากลูกบ้าน (read-only สำหรับช่าง)
+  /// 'before'   = ก่อนซ่อม (ช่างอัปโหลด)
+  /// 'after'    = หลังซ่อม (ช่างอัปโหลด)
+  final String imageType;
+
   const EvidenceCard({
     super.key,
     required this.title,
     required this.ticketId,
+    required this.imageType,
     this.isReadOnly = false,
   });
 
@@ -21,7 +27,33 @@ class EvidenceCard extends StatefulWidget {
 
 class _EvidenceCardState extends State<EvidenceCard> {
   File? _imageFile;
+  String? _remoteUrl;
   bool _uploading = false;
+  bool _loadingRemote = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRemoteImages();
+  }
+
+  Future<void> _loadRemoteImages() async {
+    setState(() => _loadingRemote = true);
+    try {
+      final urls = await TicketService.getTicketImageUrls(
+        widget.ticketId,
+        imageType: widget.imageType,
+      );
+      if (!mounted) return;
+      if (urls.isNotEmpty) {
+        setState(() => _remoteUrl = urls.last);
+      }
+    } catch (_) {
+      // ไม่มีรูป หรือ network error
+    } finally {
+      if (mounted) setState(() => _loadingRemote = false);
+    }
+  }
 
   Future<void> _pickAndUpload() async {
     if (widget.isReadOnly) return;
@@ -100,7 +132,14 @@ class _EvidenceCardState extends State<EvidenceCard> {
 
     try {
       final bytes = await File(picked.path).readAsBytes();
-      await TicketService.uploadImage(widget.ticketId, bytes, picked.name);
+      await TicketService.uploadImage(
+        widget.ticketId,
+        bytes,
+        picked.name,
+        imageType: widget.imageType,
+      );
+      if (!mounted) return;
+      await _loadRemoteImages(); // refresh signed URL จาก server
       if (!mounted) return;
       setState(() => _uploading = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -132,15 +171,14 @@ class _EvidenceCardState extends State<EvidenceCard> {
     }
   }
 
+  bool get _hasImage => _imageFile != null || _remoteUrl != null;
+
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start, // ให้ชิ้นส่วนภายในชิดซ้ายทั้งหมด
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment
-              .start, // แก้ไขจาก center เป็น start เพื่อให้ข้อความหัวข้อการอัปโหลดชิดซ้ายเรียงสวยงาม
           children: [
             Text(
               widget.title,
@@ -150,7 +188,7 @@ class _EvidenceCardState extends State<EvidenceCard> {
                 color: Color(0xFF334155),
               ),
             ),
-            if (_imageFile != null && !widget.isReadOnly) ...[
+            if (_hasImage && !widget.isReadOnly) ...[
               const SizedBox(width: 6),
               const Icon(
                 Icons.check_circle,
@@ -170,7 +208,7 @@ class _EvidenceCardState extends State<EvidenceCard> {
               color: const Color(0xFFFAFAFA),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _imageFile != null
+                color: _hasImage
                     ? const Color(0xFF16A34A)
                     : Colors.grey.shade300,
                 width: 1.5,
@@ -178,121 +216,142 @@ class _EvidenceCardState extends State<EvidenceCard> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: _uploading
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(strokeWidth: 2),
-                          SizedBox(height: 10),
-                          Text(
-                            'Uploading...',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    )
-                  : _imageFile != null
-                  ? Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.file(_imageFile!, fit: BoxFit.cover),
-                        if (!widget.isReadOnly)
-                          Positioned(
-                            bottom: 8,
-                            right: 8,
-                            child: GestureDetector(
-                              onTap: _pickAndUpload,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.6),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.edit,
-                                      color: Colors.white,
-                                      size: 12,
-                                    ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Change',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    )
-                  : widget.isReadOnly
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.image_outlined,
-                          color: Colors.grey.shade300,
-                          size: 40,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'No Photo',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEFF6FF),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.add_a_photo_rounded,
-                            color: Color(0xFF1677FF),
-                            size: 22,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Upload Photo',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1677FF),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Tap to add',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
-                      ],
-                    ),
+              child: _buildContent(),
             ),
           ),
         ),
       ],
     );
   }
+
+  Widget _buildContent() {
+    if (_uploading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(strokeWidth: 2),
+            SizedBox(height: 10),
+            Text(
+              'Uploading...',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+    if (_loadingRemote) {
+      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+    }
+    // รูปที่เพิ่งเลือก (local)
+    if (_imageFile != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.file(_imageFile!, fit: BoxFit.cover),
+          if (!widget.isReadOnly)
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: GestureDetector(
+                onTap: _pickAndUpload,
+                child: _changeBtn(),
+              ),
+            ),
+        ],
+      );
+    }
+    // รูปจาก server (signed URL)
+    if (_remoteUrl != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            _remoteUrl!,
+            fit: BoxFit.cover,
+            loadingBuilder: (_, child, progress) => progress == null
+                ? child
+                : const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+            errorBuilder: (_, __, ___) => _noPhoto(),
+          ),
+          if (!widget.isReadOnly)
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: GestureDetector(
+                onTap: _pickAndUpload,
+                child: _changeBtn(),
+              ),
+            ),
+        ],
+      );
+    }
+    // ไม่มีรูป
+    if (widget.isReadOnly) return _noPhoto();
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: const BoxDecoration(
+            color: Color(0xFFEFF6FF),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.add_a_photo_rounded,
+            color: Color(0xFF1677FF),
+            size: 22,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Upload Photo',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1677FF),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Tap to add',
+          style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
+        ),
+      ],
+    );
+  }
+
+  Widget _changeBtn() => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.black.withOpacity(0.6),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.edit, color: Colors.white, size: 12),
+        SizedBox(width: 4),
+        Text('Change', style: TextStyle(color: Colors.white, fontSize: 11)),
+      ],
+    ),
+  );
+
+  Widget _noPhoto() => Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Icon(Icons.image_outlined, color: Colors.grey.shade300, size: 40),
+      const SizedBox(height: 8),
+      Text(
+        'No Photo',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: Colors.grey.shade400,
+        ),
+      ),
+    ],
+  );
 }

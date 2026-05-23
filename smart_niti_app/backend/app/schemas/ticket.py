@@ -3,9 +3,12 @@ from datetime import datetime, date, time
 from typing import Optional, List
 from models.ticket import TicketCategory, TicketStatus
 
+
 # --- Ticket Images ---
 class TicketImageBase(BaseModel):
     image_url: str
+    image_type: Optional[str] = "resident"
+
 
 class TicketImageResponse(TicketImageBase):
     id: int
@@ -13,18 +16,22 @@ class TicketImageResponse(TicketImageBase):
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
+
 # --- Ratings ---
 class RatingBase(BaseModel):
     score: int
     comment: Optional[str] = None
 
+
 class RatingCreate(RatingBase):
     ticket_id: int
+
 
 class RatingResponse(RatingBase):
     id: int
     ticket_id: int
     model_config = ConfigDict(from_attributes=True)
+
 
 # --- Tickets ---
 class TicketBase(BaseModel):
@@ -36,8 +43,10 @@ class TicketBase(BaseModel):
     start_time: time
     end_time: time
 
+
 class TicketCreate(TicketBase):
-    req_user_id: str # UID ของ Resident ผู้แจ้ง
+    req_user_id: str  # UID ของ Resident ผู้แจ้ง
+
 
 class TicketResponse(TicketBase):
     id: int
@@ -48,12 +57,13 @@ class TicketResponse(TicketBase):
     created_at: datetime
     updated_at: datetime
     closed_at: Optional[datetime] = None
-    
+
     # ดึงข้อมูลรูปภาพและเรตติ้งที่เกี่ยวข้องมาด้วย (ถ้ามี Relationship ใน Model)
     images: List[TicketImageResponse] = []
     # rating: Optional[RatingResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
+
 
 class TicketAssign(BaseModel):
     technician_id: str

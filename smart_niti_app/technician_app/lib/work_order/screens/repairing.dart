@@ -396,6 +396,15 @@ class _RepairingScreenState extends State<RepairingScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // รูปที่ลูกบ้านแนบมา (read-only)
+                  EvidenceCard(
+                    title: 'Resident Photo',
+                    ticketId: _workOrder.backendId,
+                    imageType: 'resident',
+                    isReadOnly: true,
+                  ),
+                  const SizedBox(height: 16),
+
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -403,6 +412,7 @@ class _RepairingScreenState extends State<RepairingScreen> {
                         child: EvidenceCard(
                           title: 'Before Work',
                           ticketId: _workOrder.backendId,
+                          imageType: 'before',
                           isReadOnly: _isDone,
                         ),
                       ),
@@ -413,6 +423,7 @@ class _RepairingScreenState extends State<RepairingScreen> {
                         child: EvidenceCard(
                           title: 'After Work',
                           ticketId: _workOrder.backendId,
+                          imageType: 'after',
                           isReadOnly: _isDone,
                         ),
                       ),

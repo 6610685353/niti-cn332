@@ -26,10 +26,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
-    FirebaseAuth.instance.currentUser?.getIdToken().then((token) {
-      print("TOKEN: $token");
+    FirebaseAuth.instance.currentUser?.getIdToken(true).then((token) {
+      debugPrint("TOKEN: $token");
     });
+    _loadData();
   }
 
   Future<void> _loadData() async {
