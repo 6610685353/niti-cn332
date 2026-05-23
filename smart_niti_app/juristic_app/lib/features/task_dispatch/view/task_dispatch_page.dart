@@ -5,10 +5,7 @@ import 'package:juristic_app/features/juristic/juristic_facade.dart';
 import '../widgets/mini_stat_card.dart';
 import '../widgets/ticket_card.dart';
 import '../widgets/technician_row.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'dart:html' as html;
-import 'dart:ui_web' as ui_web;
+import 'package:firebase_auth/firebase_auth.dart';
 
 class TaskDispatchPage extends StatefulWidget {
   const TaskDispatchPage({super.key});
@@ -26,10 +23,26 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
   String? _error;
   int? _selectedTicketId;
 
+  // 👈 cache ชื่อ resident
+  final Map<String, String> _residentNameCache = {};
+
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _waitForAuthThenLoad(); // 👈 เปลี่ยนจาก _loadData()
+  }
+
+  Future<void> _waitForAuthThenLoad() async {
+    // รอให้ Firebase มี user ที่ login แล้วก่อน (timeout 5 วินาที)
+    final user = await FirebaseAuth.instance
+        .authStateChanges()
+        .firstWhere((u) => u != null)
+        .timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => FirebaseAuth.instance.currentUser,
+        );
+
+    if (mounted) _loadData();
   }
 
   Future<void> _loadData() async {
@@ -43,17 +56,43 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
         _facade.getTickets(),
         _facade.getTechnicians(),
       ]);
-      setState(() {
-        _tickets = results[0] as List<TicketModel>;
-        _technicians = results[1] as List<Map<String, dynamic>>;
-        _loading = false;
-      });
+      _tickets = results[0] as List<TicketModel>;
+      _technicians = results[1] as List<Map<String, dynamic>>;
+
+      // 👈 ดึงชื่อ resident ของทุก ticket
+      await _fetchResidentNames(_tickets);
+
+      setState(() => _loading = false);
     } catch (e) {
       setState(() {
         _error = e.toString();
         _loading = false;
       });
     }
+  }
+
+  // 👈 ดึงชื่อ resident เฉพาะที่ยังไม่มีใน cache
+  Future<void> _fetchResidentNames(List<TicketModel> tickets) async {
+    final missingUids = tickets
+        .map((t) => t.reqUserId)
+        .toSet()
+        .where((uid) => !_residentNameCache.containsKey(uid))
+        .toList();
+
+    if (missingUids.isEmpty) return;
+
+    await Future.wait(
+      missingUids.map((uid) async {
+        try {
+          final user = await _facade.getUser(uid);
+          final name = '${user['first_name'] ?? ''} ${user['last_name'] ?? ''}'
+              .trim();
+          _residentNameCache[uid] = name.isEmpty ? uid : name;
+        } catch (_) {
+          _residentNameCache[uid] = uid;
+        }
+      }),
+    );
   }
 
   // ─── filtered lists ────────────────────────────────────────────
@@ -170,8 +209,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 24),
-
-                  // ── Mini Stat Cards ──────────────────────────────
                   Wrap(
                     spacing: 16,
                     runSpacing: 16,
@@ -206,11 +243,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 32),
-
-                  // ── Main Content ─────────────────────────────────
-                  // ── Main Content ─────────────────────────────────
                   isNarrow
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,7 +252,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                             const SizedBox(height: 24),
                             _buildAssignedTickets(),
                             const SizedBox(height: 24),
-                            // 🌟 วางกล่อง Completed ตรงนี้ (สำหรับจอเล็ก)
                             _buildCompletedTickets(),
                             const SizedBox(height: 24),
                             _buildTechnicianAvailability(),
@@ -265,15 +297,14 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
     String? subValue,
   }) {
     double cardWidth;
-    if (maxWidth < 600) {
+    if (maxWidth < 600)
       cardWidth = maxWidth - 64;
-    } else if (maxWidth < 900) {
+    else if (maxWidth < 900)
       cardWidth = ((maxWidth - 64 - 16) / 2).floorToDouble();
-    } else if (maxWidth < 1200) {
+    else if (maxWidth < 1200)
       cardWidth = ((maxWidth - 64 - 32) / 3).floorToDouble();
-    } else {
+    else
       cardWidth = ((maxWidth - 64 - 48) / 4).floorToDouble();
-    }
 
     return SizedBox(
       width: cardWidth,
@@ -295,7 +326,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
       count: _unassigned.length,
       icon: Icons.priority_high,
       color: AppColors.primaryBlue,
-      hintText: _selectedTicketId == null ? "" : "",
+      hintText: "",
       initiallyExpanded: true,
       content: _unassigned.isEmpty
           ? _buildEmptyState("ไม่มีงานใหม่ที่รอการมอบหมาย")
@@ -305,7 +336,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
               itemCount: _unassigned.length,
               itemBuilder: (context, i) {
                 final ticket = _unassigned[i];
-
                 return Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -322,17 +352,14 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     timeAgo: ticket.timeAgo,
                     assignedTo: ticket.assignedToId?.toString() ?? '-',
                     isSelected: _selectedTicketId == ticket.id,
-                    onTap: () {
-                      setState(() {
-                        _selectedTicketId = _selectedTicketId == ticket.id
-                            ? null
-                            : ticket.id;
-                      });
-                    },
-
-                    // ✅ ใช้แบบนี้แทน onViewImage
-                    hasImages: ticket.imageFilenames.isNotEmpty,
+                    onTap: () => setState(() {
+                      _selectedTicketId = _selectedTicketId == ticket.id
+                          ? null
+                          : ticket.id;
+                    }),
+                    hasImages: (ticket.imageUrls ?? []).isNotEmpty,
                     onImageTap: () => _showTicketImages(ticket),
+                    userName: _residentNameCache[ticket.reqUserId], // 👈
                   ),
                 );
               },
@@ -340,7 +367,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
     );
   }
 
-  // ── Assigned Tickets ────────────────────────────────────────
+  // ── Assigned Tickets ──────────────────────────────────────────
 
   Widget _buildAssignedTickets() {
     return _buildExpandableSection(
@@ -358,9 +385,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
               itemCount: _assigned.length,
               itemBuilder: (context, i) {
                 final ticket = _assigned[i];
-                final List<String> images =
-                    ticket.imageUrls ?? []; // 🌟 ดึงรูปลูกบ้าน
-
                 final ticketTechId = ticket.assignedToId?.toString();
                 final techMap = _technicians.where(
                   (t) => t['uid']?.toString() == ticketTechId,
@@ -388,10 +412,9 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     isSelected: false,
                     onTap: null,
                     onUnassign: () => _unassignTicket(ticket.id),
-
-                    // ✅ ใช้แบบนี้แทน onViewImage
-                    hasImages: ticket.imageFilenames.isNotEmpty,
+                    hasImages: (ticket.imageUrls ?? []).isNotEmpty,
                     onImageTap: () => _showTicketImages(ticket),
+                    userName: _residentNameCache[ticket.reqUserId], // 👈
                   ),
                 );
               },
@@ -399,7 +422,7 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
     );
   }
 
-  // ── Completed Tickets ───────────────────────────────────────
+  // ── Completed Tickets ────────────────────────────────────────
 
   Widget _buildCompletedTickets() {
     return _buildExpandableSection(
@@ -417,9 +440,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
               itemCount: _done.length,
               itemBuilder: (context, i) {
                 final ticket = _done[i];
-                final List<String> images =
-                    ticket.imageUrls ?? []; // 🌟 ดึงรูปลูกบ้าน
-
                 final ticketTechId = ticket.assignedToId?.toString();
                 final techMap = _technicians.where(
                   (t) => t['uid']?.toString() == ticketTechId,
@@ -446,9 +466,9 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
                     assignedTo: techName,
                     isSelected: false,
                     onTap: null,
-
-                    hasImages: ticket.imageFilenames.isNotEmpty,
+                    hasImages: (ticket.imageUrls ?? []).isNotEmpty,
                     onImageTap: () => _showTicketImages(ticket),
+                    userName: _residentNameCache[ticket.reqUserId], // 👈
                   ),
                 );
               },
@@ -456,7 +476,160 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
     );
   }
 
-  // ── UI Helper: สร้างกล่องยุบขยายได้ (Accordion) ───────────────
+  // ── Show Images ───────────────────────────────────────────────
+
+  Future<void> _showTicketImages(TicketModel ticket) async {
+    final imageUrls = ticket.imageUrls ?? [];
+    if (imageUrls.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ไม่มีรูปภาพสำหรับ ticket นี้')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final signedUrls = await Future.wait(
+        imageUrls.map((path) async {
+          final filename = path.split('/').last;
+          return _facade.getTicketImageSignedUrl(ticket.id, filename);
+        }),
+      );
+
+      if (mounted) Navigator.of(context).pop();
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 12, 0),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.image_outlined,
+                        size: 20,
+                        color: AppColors.primaryBlue,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          ticket.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: const Icon(Icons.close, size: 20),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                  child: Text(
+                    '${signedUrls.length} รูปภาพ',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  ),
+                ),
+                const Divider(height: 1),
+                Flexible(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    shrinkWrap: true,
+                    itemCount: signedUrls.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (_, i) => ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        signedUrls[i],
+                        fit: BoxFit.contain,
+                        loadingBuilder: (_, child, progress) {
+                          if (progress == null) return child;
+                          return Container(
+                            height: 180,
+                            color: Colors.grey.shade100,
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => Container(
+                          height: 120,
+                          color: Colors.grey.shade100,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.broken_image_outlined,
+                                size: 36,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'โหลดรูปไม่ได้',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('ปิด'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('โหลดรูปภาพไม่ได้: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // ── UI Helpers ────────────────────────────────────────────────
 
   Widget _buildExpandableSection({
     required String title,
@@ -481,7 +654,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
         ],
       ),
       child: Theme(
-        // ลบเส้นขอบของ ExpansionTile ที่ชอบโผล่มาตอนกางออก
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
@@ -518,7 +690,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
               : null,
           children: [
             const Divider(height: 1, thickness: 1),
-            // 🌟 จุดสำคัญ: ล็อกความสูงตอนกางออกไม่ให้เกิน 450px ถ้าล้นให้เลื่อน Scroll เอา
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 450),
               child: content,
@@ -528,8 +699,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
       ),
     );
   }
-
-  // ── UI Helper: หน้าต่างตอนไม่มีข้อมูล ──────────────────────────
 
   Widget _buildEmptyState(String message) {
     return Container(
@@ -548,7 +717,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
       ),
     );
   }
-  // ── Technician Availability ──────────────────────────────────
 
   Widget _buildTechnicianAvailability() {
     return Container(
@@ -633,7 +801,6 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
             padding: EdgeInsets.only(top: 12, bottom: 4),
             child: Divider(height: 1),
           ),
-
           if (_technicians.isEmpty)
             Padding(
               padding: const EdgeInsets.all(24),
@@ -646,33 +813,24 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
             )
           else
             ...(_technicians.map((tech) {
-              // 👈 ใช้ ?.toString() แทน as String เพื่อป้องกันแอปพังถ้า UID มาเป็นตัวเลข
               final techId = tech['uid']?.toString() ?? '';
               final name =
                   '${tech['first_name'] ?? ''} ${tech['last_name'] ?? ''}'
                       .trim();
-              final role = (tech['role']?.toString() ?? 'technician');
-
-              // 👈 นับ workload ให้ถูกต้อง โดยแปลงค่าเป็น String ก่อนเทียบ
+              final role = tech['role']?.toString() ?? 'technician';
               final workload = _assigned
                   .where((t) => t.assignedToId?.toString() == techId)
                   .length;
-
-              Color roleColor;
-              switch (role) {
-                case 'technician':
-                  roleColor = AppColors.primaryBlue;
-                  break;
-                default:
-                  roleColor = Colors.grey;
-              }
+              final roleColor = role == 'technician'
+                  ? AppColors.primaryBlue
+                  : Colors.grey;
 
               return Column(
                 children: [
                   TechnicianRow(
                     name: name,
                     role: role,
-                    currentTasks: workload, // ส่ง Workload ไปโชว์ให้ถูกต้อง
+                    currentTasks: workload,
                     roleColor: roleColor,
                     isAssignEnabled: _selectedTicketId != null,
                     onAssign: _selectedTicketId != null
@@ -686,160 +844,5 @@ class _TaskDispatchPageState extends State<TaskDispatchPage> {
         ],
       ),
     );
-  }
-
-  Future<void> _showTicketImages(TicketModel ticket) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      // 1. ดึง metadata รายการรูปทั้งหมด
-      final images = await _facade.getTicketImages(ticket.id);
-
-      if (mounted) Navigator.of(context).pop();
-      if (!mounted) return;
-
-      if (images.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ไม่มีรูปภาพสำหรับ ticket นี้')),
-        );
-        return;
-      }
-
-      // 2. ดึง signed URL แต่ละรูป (ใช้ filename จาก image_url เช่น "1/ticket_1_abc.jpg" → "ticket_1_abc.jpg")
-      final signedUrls = await Future.wait(
-        images.map((img) async {
-          final filename = (img['image_url'] as String).split('/').last;
-          return _facade.getTicketImageSignedUrl(ticket.id, filename);
-        }),
-      );
-
-      // 3. เปิด dialog แสดงรูป
-      showDialog(
-        context: context,
-        builder: (ctx) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 12, 0),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.image_outlined,
-                        size: 20,
-                        color: AppColors.primaryBlue,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          ticket.title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        icon: const Icon(Icons.close, size: 20),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                  child: Text(
-                    '${signedUrls.length} picture(s)',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                  ),
-                ),
-                const Divider(height: 1),
-                Flexible(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    shrinkWrap: true,
-                    itemCount: signedUrls.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (_, i) => ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        signedUrls[i], // ✅ ใช้ signed URL จาก Supabase โดยตรง
-                        fit: BoxFit.contain,
-                        loadingBuilder: (_, child, progress) {
-                          if (progress == null) return child;
-                          return Container(
-                            height: 180,
-                            color: Colors.grey.shade100,
-                            child: const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        },
-                        errorBuilder: (_, __, ___) => Container(
-                          height: 120,
-                          color: Colors.grey.shade100,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.broken_image_outlined,
-                                size: 36,
-                                color: Colors.grey.shade400,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'โหลดรูปไม่ได้',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: const Text('Close'),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    } catch (e) {
-      if (mounted) Navigator.of(context).pop();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('โหลดรูปภาพไม่ได้: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 }

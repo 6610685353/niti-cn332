@@ -7,10 +7,9 @@ class TicketCard extends StatelessWidget {
   final bool isSelected;
   final VoidCallback? onTap;
   final VoidCallback? onUnassign;
-
-  // 🌟 เพิ่ม 2 ตัวแปรนี้สำหรับจัดการรูปภาพ
   final bool hasImages;
   final VoidCallback? onImageTap;
+  final String? userName; // 👈 เพิ่ม
 
   const TicketCard({
     super.key,
@@ -26,8 +25,9 @@ class TicketCard extends StatelessWidget {
     this.isSelected = false,
     this.onTap,
     this.onUnassign,
-    this.hasImages = false, // ค่าเริ่มต้นคือไม่มีรูป
+    this.hasImages = false,
     this.onImageTap,
+    this.userName, // 👈 เพิ่ม
   });
 
   @override
@@ -52,6 +52,7 @@ class TicketCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Row บน: location + category tag ──
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -107,7 +108,10 @@ class TicketCard extends StatelessWidget {
                 ),
               ],
             ),
+
             const SizedBox(height: 12),
+
+            // ── ชื่องาน ──
             Text(
               title,
               style: const TextStyle(
@@ -123,7 +127,10 @@ class TicketCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
+
             const SizedBox(height: 12),
+
+            // ── เวลา ──
             Row(
               children: [
                 const Icon(
@@ -141,7 +148,40 @@ class TicketCard extends StatelessWidget {
                 ),
               ],
             ),
+
+            // 👈 ── ชื่อผู้ส่ง ticket ──
+            if (userName != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 11,
+                    backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
+                    child: Text(
+                      userName!.isNotEmpty ? userName![0].toUpperCase() : '?',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    userName!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.darkGrey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
             const SizedBox(height: 8),
+
+            // ── Row ล่าง: assigned technician + ปุ่มรูป ──
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -210,7 +250,6 @@ class TicketCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                // 🌟 ปุ่มรูปภาพ
                 IconButton(
                   onPressed: () {
                     if (!hasImages) {
@@ -227,7 +266,6 @@ class TicketCard extends StatelessWidget {
                   },
                   icon: Icon(
                     Icons.image,
-                    // สีเทาถ้าไม่มีรูป สีน้ำเงินถ้ามีรูป
                     color: hasImages
                         ? AppColors.primaryBlue
                         : Colors.grey.shade300,

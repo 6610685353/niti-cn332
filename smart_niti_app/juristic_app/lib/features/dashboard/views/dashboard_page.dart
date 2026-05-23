@@ -7,6 +7,7 @@ import '../widgets/recent_complaints_card.dart';
 import '../widgets/repair_overview_card.dart';
 import '../widgets/stat_card.dart';
 import 'package:juristic_app/features/home/view/home_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DashboardPage extends StatefulWidget {
   final VoidCallback? onViewAllTap;
@@ -24,10 +25,26 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _loading = true;
   String? _error;
 
+  // 👈 เพิ่ม import
+
   @override
   void initState() {
     super.initState();
-    _loadTickets();
+    _waitForAuthThenLoad(); // 👈 เปลี่ยนจาก _loadTickets()
+  }
+
+  Future<void> _waitForAuthThenLoad() async {
+    // รอให้ Firebase restore session ก่อน (ไม่เกิน 10 วินาที)
+    await FirebaseAuth.instance
+        .authStateChanges()
+        .firstWhere((u) => u != null)
+        .timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => FirebaseAuth.instance.currentUser,
+        );
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (mounted) _loadTickets();
   }
 
   Future<void> _loadTickets() async {
