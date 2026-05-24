@@ -90,13 +90,23 @@ Iteration 6: [Smart Niti Iteration 6 (Facade & Adapter Pattern)](https://www.can
 Iteration 7: [Smart Niti Iteration 7 (Implement Plan)](https://www.canva.com/design/DAHDFrfeymw/zgIoPW6FiC3qV7l1JkCUzA/view?utm_content=DAHDFrfeymw&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h3529507806)
 
 ---
-## Live Demo
+## Live Demo Videos
 
-- [Resident (ลูกบ้าน) – Application Live Demo](https://drive.google.com/drive/folders/1z7impwBif7HZRWsYC_VMSHCZ1VWik6bP)
+- [Resident (ลูกบ้าน) – Video Presentation](https://drive.google.com/drive/folders/1z7impwBif7HZRWsYC_VMSHCZ1VWik6bP)
 
-- [Technician (ช่าง) – Application Live Demo](https://drive.google.com/file/d/1Nnr4fpn-csTD8xransCy42NKI4lnaGGQ/view?usp=drive_link)
+- [Technician (ช่าง) – Video Presentation](https://drive.google.com/file/d/1Nnr4fpn-csTD8xransCy42NKI4lnaGGQ/view?usp=drive_link)
 
-- [Juristic (นิติบุคคล) – Application Live Demo](https://drive.google.com/file/d/10gJiyqQ8gKgFf8Giu7AiGaH-sEo27X4V/view?usp=sharing)
+- [Juristic (นิติบุคคล) – Video Presentation](https://drive.google.com/file/d/10gJiyqQ8gKgFf8Giu7AiGaH-sEo27X4V/view?usp=sharing)
+
+---
+
+## Deployed Applications
+
+- [Resident (ลูกบ้าน) – Web Application](https://your-resident-app.vercel.app)
+
+- [Technician (ช่าง) – Web Application](https://your-technician-app.vercel.app)
+
+- [Juristic (นิติบุคคล) – Web Application](https://smart-niti-juristic.vercel.app)
 
 ---
 
