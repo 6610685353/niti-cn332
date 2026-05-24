@@ -136,7 +136,7 @@ Iteration 8: [Smart Niti Iteration 8 (Final Iteration)](https://canva.link/i74fb
   - Smart Niti Iteration 6 (Facade & Adapter Pattern)
   - Smart Niti Iteration 7 (Implement Plan)
  
-- **18 พฤกษภาคม 2569
+- **18 พฤกษภาคม 2569**
   - Smart Niti Iteration 8 (Final Iteration)
 
 
