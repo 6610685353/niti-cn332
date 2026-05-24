@@ -107,6 +107,8 @@ class _LoginPageState extends State<LoginPage> {
                         rememberMe: _rememberMe,
                         onRememberMeChanged: (val) =>
                             setState(() => _rememberMe = val),
+                        onForgotPassword: () =>
+                            controller.handleForgotPassword(context),
                       ),
 
                       const SizedBox(height: 24),

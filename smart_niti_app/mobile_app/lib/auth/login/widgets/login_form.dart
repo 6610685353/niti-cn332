@@ -7,6 +7,7 @@ class LoginForm extends StatefulWidget {
   final TextEditingController passwordController;
   final bool rememberMe;
   final ValueChanged<bool> onRememberMeChanged;
+  final VoidCallback onForgotPassword;
 
   const LoginForm({
     super.key,
@@ -14,6 +15,7 @@ class LoginForm extends StatefulWidget {
     required this.passwordController,
     required this.rememberMe,
     required this.onRememberMeChanged,
+    required this.onForgotPassword,
   });
 
   @override
@@ -187,11 +189,7 @@ class _LoginFormState extends State<LoginForm> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Forgot Password Clicked')),
-                );
-              },
+              onPressed: widget.onForgotPassword,
               child: const Text(
                 'Forgot Password?',
                 style: TextStyle(

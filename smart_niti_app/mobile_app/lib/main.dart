@@ -5,10 +5,12 @@ import 'firebase_options.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import './resident/features/repair_request/provider/repair_request_provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await dotenv.load(fileName: '.env');
   await GoogleSignIn.instance.initialize(
     serverClientId:
         '825941701407-2blehanidnkegfvfg0s72u7310o9topj.apps.googleusercontent.com',
