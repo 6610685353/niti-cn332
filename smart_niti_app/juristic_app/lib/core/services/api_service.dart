@@ -6,7 +6,10 @@ import 'package:firebase_auth/firebase_auth.dart'; // 👈 1. อย่าลื
 /// เช่น ถ้ารันบนเครื่องเดียวกัน ใช้ http://localhost:8000
 /// ถ้า Flutter Web ใช้ http://127.0.0.1:8000
 /// ถ้าเป็น Android Emulator ใช้ http://10.0.2.2:8000
-const String kBaseUrl = 'http://localhost:8000';
+const String kBaseUrl = String.fromEnvironment(
+  'BASE_URL',
+  defaultValue: 'http://localhost:8000', // ใช้ตอนรัน local
+);
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
