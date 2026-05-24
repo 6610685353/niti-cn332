@@ -74,7 +74,7 @@
 
 ## Deployed Applications
 
-- [Resident (ลูกบ้าน) – Mobile Application](https://your-resident-app.vercel.app)
+- [Resident (ลูกบ้าน) – Mobile Application](https://drive.google.com/drive/folders/1gCy_l9M6CrjtTDi-aH-xx4O68yYETA74?usp=sharing)
 
 - [Technician (ช่าง) – Mobile Application](https://your-technician-app.vercel.app)
 
