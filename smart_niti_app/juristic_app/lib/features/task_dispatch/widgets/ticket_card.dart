@@ -4,10 +4,12 @@ import 'package:juristic_app/core/constants/app_colors.dart';
 class TicketCard extends StatelessWidget {
   final String location, roomType, tag, title, description, timeAgo, assignedTo;
   final Color tagColor, tagBgColor;
-
-  // 🌟 เพิ่ม 2 ตัวนี้เข้ามาเพื่อให้กดเลือกได้
   final bool isSelected;
   final VoidCallback? onTap;
+  final VoidCallback? onUnassign;
+  final bool hasImages;
+  final VoidCallback? onImageTap;
+  final String? userName; // 👈 เพิ่ม
 
   const TicketCard({
     super.key,
@@ -20,22 +22,24 @@ class TicketCard extends StatelessWidget {
     required this.description,
     required this.timeAgo,
     required this.assignedTo,
-    this.isSelected = false, // ค่าเริ่มต้นคือไม่ได้ถูกเลือก
+    this.isSelected = false,
     this.onTap,
+    this.onUnassign,
+    this.hasImages = false,
+    this.onImageTap,
+    this.userName, // 👈 เพิ่ม
   });
 
   @override
   Widget build(BuildContext context) {
     bool isUnassigned = assignedTo == "-";
 
-    // 🌟 ใช้ GestureDetector หรือ InkWell ครอบเพื่อให้กดได้
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          // ถ้าถูกเลือก ให้พื้นหลังเป็นสีฟ้าอ่อนๆ และขอบเป็นสีน้ำเงินหนา 2px
           color: isSelected
               ? AppColors.primaryBlue.withOpacity(0.05)
               : Colors.white,
@@ -48,6 +52,7 @@ class TicketCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Row บน: location + category tag ──
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -103,7 +108,10 @@ class TicketCard extends StatelessWidget {
                 ),
               ],
             ),
+
             const SizedBox(height: 12),
+
+            // ── ชื่องาน ──
             Text(
               title,
               style: const TextStyle(
@@ -119,7 +127,10 @@ class TicketCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
+
             const SizedBox(height: 12),
+
+            // ── เวลา ──
             Row(
               children: [
                 const Icon(
@@ -137,41 +148,127 @@ class TicketCard extends StatelessWidget {
                 ),
               ],
             ),
+
+            // 👈 ── ชื่อผู้ส่ง ticket ──
+            if (userName != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 11,
+                    backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
+                    child: Text(
+                      userName!.isNotEmpty ? userName![0].toUpperCase() : '?',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    userName!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.darkGrey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
             const SizedBox(height: 8),
+
+            // ── Row ล่าง: assigned technician + ปุ่มรูป ──
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      "Assigned Technician: ",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isUnassigned
-                            ? AppColors.errorRed
-                            : AppColors.successGreen,
-                        fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        "Assigned Technician: ",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isUnassigned
+                              ? AppColors.errorRed
+                              : AppColors.successGreen,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    Text(
-                      assignedTo,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isUnassigned
-                            ? AppColors.errorRed
-                            : AppColors.successGreen,
+                      Text(
+                        assignedTo,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isUnassigned
+                              ? AppColors.errorRed
+                              : AppColors.successGreen,
+                        ),
                       ),
-                    ),
-                  ],
+                      if (onUnassign != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0, top: 4.0),
+                          child: InkWell(
+                            onTap: onUnassign,
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.errorRed.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(
+                                    Icons.person_remove,
+                                    size: 12,
+                                    color: AppColors.errorRed,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    "Unassign",
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.errorRed,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
                 IconButton(
                   onPressed: () {
-                    // 🌟 กดปุ่มรูปภาพเพื่อดูรายละเอียดเพิ่มเติม (เช่น รูปภาพของปัญหา)
+                    if (!hasImages) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('No picture attached with this ticket'),
+                          backgroundColor: AppColors.warningOrange,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                      return;
+                    }
+                    if (onImageTap != null) onImageTap!();
                   },
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.image,
-                    color: Colors.black87,
+                    color: hasImages
+                        ? AppColors.primaryBlue
+                        : Colors.grey.shade300,
                     size: 30,
                   ),
                   padding: EdgeInsets.zero,

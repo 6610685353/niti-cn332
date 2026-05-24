@@ -110,61 +110,6 @@ class Step3ConfirmView extends StatelessWidget {
               ],
             ),
           ),
-
-          const SizedBox(height: 20),
-
-          // --- 4. Fee Section ---
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEAF4F7), // สีฟ้าอ่อน Cyan 50
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFDAEFF6)),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(
-                          Icons.payments_outlined,
-                          color: Color(0xFF13B6EC),
-                          size: 22,
-                        ),
-                        SizedBox(width: 10),
-                        Text(
-                          "Initial Inspection Fee",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF111618),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      "\$${data.inspectionFee.toStringAsFixed(2)}",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF13B6EC),
-                        fontSize: 20,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  "* This fee covers the technician's visit and diagnosis. It may be waived or applied to the final repair cost if you proceed with the recommended service.",
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF6B7280),
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: 120),
         ],
       ),

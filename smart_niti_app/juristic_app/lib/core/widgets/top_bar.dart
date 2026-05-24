@@ -1,5 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:juristic_app/core/constants/app_colors.dart';
+import 'package:juristic_app/core/widgets/notification_bell.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TopBar extends StatelessWidget implements PreferredSizeWidget {
   final IconData icon;
@@ -23,8 +26,8 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
     final List<String> menuItems = [
       'Dashboard',
       'Task Dispatch',
-      'Announcement',
-      'Parcel',
+      // 'Announcement',
+      // 'Parcel',
     ];
 
     return AppBar(
@@ -88,9 +91,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           const SizedBox(width: 5),
 
-          // 🌟 ปุ่มกระดิ่ง Notification ที่มีกรอบและกดได้
-          _buildNotificationButton(),
-
+          NotificationBell(),
           const SizedBox(width: 16),
 
           // 🌟 ปุ่ม Logout ที่มีกรอบพื้นหลังสีเทา
@@ -128,7 +129,10 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        onTap: () => Navigator.pushReplacementNamed(context, '/login'),
+        onTap: () {
+          // เปลี่ยนมาเรียกฟังก์ชันโชว์ Popup แทน
+          _showLogoutDialog(context);
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -150,6 +154,76 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
       ),
+    );
+  }
+
+  // สร้างฟังก์ชันสำหรับแสดง Popup (AlertDialog)
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(
+              12,
+            ), // ขอบมนสวยๆ ให้เข้ากับธีมแอป
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              SizedBox(width: 8),
+              Text("Logout", style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: const Text(
+            "Are you sure you want to logout?",
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            // ปุ่ม Cancel
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // ปิด popup เฉยๆ
+              },
+              child: Text(
+                "Cancel",
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            ),
+            // ปุ่มยืนยัน Logout
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () async {
+                // 1. ปิด Popup ก่อน
+                Navigator.of(dialogContext).pop();
+
+                // 2. เคลียร์ค่าหน้าล่าสุดในหน่วยความจำกลับเป็น 0 (Dashboard) ตรงนี้เลยครับ!
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setInt(
+                  'last_menu_index',
+                  0,
+                ); // รีเซ็ตกลับไปหน้าแรกสุด
+
+                // 3. พากลับไปหน้า Login แบบเคลียร์ประวัติหน้าจอทั้งหมด
+                if (context.mounted) {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/login',
+                    (route) => false,
+                  );
+                }
+              },
+              child: const Text("Logout"),
+            ),
+          ],
+        );
+      },
     );
   }
 }

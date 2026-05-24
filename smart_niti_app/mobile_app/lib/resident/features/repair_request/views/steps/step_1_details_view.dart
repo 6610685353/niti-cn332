@@ -11,18 +11,9 @@ class Step1DetailsView extends StatelessWidget {
     final picker = ImagePicker();
     final provider = context.read<RepairRequestProvider>();
 
-    // เช็คก่อนว่าครบ 4 รูปยัง
-    if (provider.requestData.images.length >= 4) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Maximum 4 images allowed")));
-      return;
-    }
-
     final XFile? pickedFile = await picker.pickImage(
-      source:
-          ImageSource.gallery, // เลือกจากแกลเลอรี (หรือ .camera สำหรับกล้อง)
-      imageQuality: 80, // บีบอัดเล็กน้อยเพื่อประหยัดพื้นที่
+      source: ImageSource.gallery,
+      imageQuality: 80,
     );
 
     if (pickedFile != null) {
@@ -195,10 +186,11 @@ class Step1DetailsView extends StatelessWidget {
             spacing: 12,
             runSpacing: 12,
             children: [
-              GestureDetector(
-                onTap: () => _pickImage(context),
-                child: _buildImagePicker(context),
-              ),
+              if (data.images.length < 4)
+                GestureDetector(
+                  onTap: () => _pickImage(context),
+                  child: _buildImagePicker(context),
+                ),
               ...data.images.asMap().entries.map((entry) {
                 int index = entry.key;
                 File file = entry.value;

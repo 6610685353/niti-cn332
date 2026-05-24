@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../home/screens/home.dart';
-import '../../profile/screens/profile.dart';
+import '../../profile/screens/profile_screen.dart';
 import '../constants/app_color.dart';
 import '../../schedule/screens/schedule.dart';
 

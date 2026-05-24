@@ -6,6 +6,8 @@ class AppColors {
   static const Color bgApp = Color(0xFFF1F5F9);
   static const Color textDark = Color(0xFF0F172A);
   static const Color textLight = Color(0xFF64748B);
+  static const Color bgLight2 = Color(0xFFF2F7FF);
+  static const Color textDark2 = Color(0xFF1A73E8);
 
   // Home - work summary
   static const Color assignedBg = Color(0xFFFFE4E6);

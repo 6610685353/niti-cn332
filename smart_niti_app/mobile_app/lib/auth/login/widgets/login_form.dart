@@ -1,13 +1,19 @@
+// lib/auth/login/widgets/login_form.dart
+
 import 'package:flutter/material.dart';
 
 class LoginForm extends StatefulWidget {
   final TextEditingController usernameController;
   final TextEditingController passwordController;
+  final bool rememberMe;
+  final ValueChanged<bool> onRememberMeChanged;
 
   const LoginForm({
     super.key,
     required this.usernameController,
     required this.passwordController,
+    required this.rememberMe,
+    required this.onRememberMeChanged,
   });
 
   @override
@@ -15,8 +21,7 @@ class LoginForm extends StatefulWidget {
 }
 
 class _LoginFormState extends State<LoginForm> {
-  bool obscurePassword = true; // 👁 state เปิด–ปิดรหัส
-  bool rememberMe = false;
+  bool obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +45,7 @@ class _LoginFormState extends State<LoginForm> {
 
         // ================= USERNAME =================
         const Text(
-          'Username/Email',
+          'Email',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
         ),
         const SizedBox(height: 8),
@@ -61,13 +66,11 @@ class _LoginFormState extends State<LoginForm> {
                   size: 24,
                 ),
               ),
-
               Container(
                 width: 1,
                 height: 56,
                 color: Color.fromRGBO(219, 224, 230, 1),
               ),
-
               Expanded(
                 child: TextField(
                   controller: widget.usernameController,
@@ -114,13 +117,11 @@ class _LoginFormState extends State<LoginForm> {
                   size: 24,
                 ),
               ),
-
               Container(
                 width: 1,
                 height: 56,
                 color: Color.fromRGBO(219, 224, 230, 1),
               ),
-
               Expanded(
                 child: TextField(
                   controller: widget.passwordController,
@@ -138,13 +139,11 @@ class _LoginFormState extends State<LoginForm> {
                   ),
                 ),
               ),
-
               Container(
                 width: 1,
                 height: 56,
                 color: Color.fromRGBO(219, 224, 230, 1),
               ),
-
               IconButton(
                 onPressed: () {
                   setState(() {
@@ -164,27 +163,28 @@ class _LoginFormState extends State<LoginForm> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                SizedBox(
-                  height: 24,
-                  width: 24,
-                  child: Checkbox(
-                    value: rememberMe,
-                    onChanged: (value) {
-                      setState(() {
-                        rememberMe = value ?? false;
-                      });
-                    },
+            // ── Remember Me ────────────────────────────────────────────
+            GestureDetector(
+              onTap: () => widget.onRememberMeChanged(!widget.rememberMe),
+              child: Row(
+                children: [
+                  SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: Checkbox(
+                      value: widget.rememberMe,
+                      onChanged: (value) =>
+                          widget.onRememberMeChanged(value ?? false),
+                      activeColor: const Color(0xFF137FEC),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 6),
-
-                const Text(
-                  'Remember Me',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Remember Me',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
             ),
             TextButton(
               onPressed: () {

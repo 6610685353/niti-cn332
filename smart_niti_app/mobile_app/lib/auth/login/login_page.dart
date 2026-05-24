@@ -1,177 +1,7 @@
-// import 'package:flutter/material.dart';
-// import 'login_controller.dart';
-// import 'widgets/login_header.dart';
-// import 'widgets/login_form.dart';
-// import 'widgets/login_button.dart';
-
-// class LoginPage extends StatefulWidget {
-//   const LoginPage({super.key});
-
-//   @override
-//   State<LoginPage> createState() => _LoginPageState();
-// }
-
-// class _LoginPageState extends State<LoginPage> {
-//   late LoginController controller;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     controller = LoginController(context);
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: const Color(0xFFF8FAFC),
-//       body: SafeArea(
-//         child: Center(
-//           child: ConstrainedBox(
-//             constraints: const BoxConstraints(maxWidth: 360),
-//             child: Column(
-//               mainAxisSize: MainAxisSize.min,
-//               children: [
-//                 const LoginHeader(),
-//                 const SizedBox(height: 32),
-
-//                 LoginForm(
-//                   usernameController: controller.usernameController,
-//                   passwordController: controller.passwordController,
-//                 ),
-
-//                 const SizedBox(height: 40),
-
-//                 LoginButton(onPressed: controller.login),
-//               ],
-//             ),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
-// import 'package:flutter/material.dart';
-// import 'login_controller.dart';
-
-// class LoginPage extends StatefulWidget {
-//   const LoginPage({Key? key}) : super(key: key);
-
-//   @override
-//   State<LoginPage> createState() => _LoginPageState();
-// }
-
-// class _LoginPageState extends State<LoginPage> {
-//   final LoginController _controller = LoginController();
-//   final TextEditingController _emailCtrl = TextEditingController();
-//   final TextEditingController _passCtrl = TextEditingController();
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: Colors.white,
-//       body: Padding(
-//         padding: const EdgeInsets.all(24.0),
-//         child: Column(
-//           mainAxisAlignment: MainAxisAlignment.center,
-//           crossAxisAlignment: CrossAxisAlignment.stretch,
-//           children: [
-//             const Text(
-//               "Smart Niti",
-//               textAlign: TextAlign.center,
-//               style: TextStyle(
-//                 fontSize: 32,
-//                 fontWeight: FontWeight.bold,
-//                 color: Colors.blueAccent,
-//               ),
-//             ),
-//             const SizedBox(height: 40),
-
-//             // Email Input
-//             TextField(
-//               controller: _emailCtrl,
-//               decoration: const InputDecoration(
-//                 labelText: 'Email',
-//                 border: OutlineInputBorder(),
-//               ),
-//             ),
-//             const SizedBox(height: 16),
-
-//             // Password Input
-//             TextField(
-//               controller: _passCtrl,
-//               obscureText: true,
-//               decoration: const InputDecoration(
-//                 labelText: 'Password',
-//                 border: OutlineInputBorder(),
-//               ),
-//             ),
-//             const SizedBox(height: 24),
-
-//             // Login Button (Email)
-//             ElevatedButton(
-//               onPressed: () => _controller.handleEmailLogin(
-//                 context,
-//                 _emailCtrl.text,
-//                 _passCtrl.text,
-//               ),
-//               style: ElevatedButton.styleFrom(
-//                 padding: const EdgeInsets.symmetric(vertical: 16),
-//               ),
-//               child: const Text("เข้าสู่ระบบ"),
-//             ),
-
-//             const SizedBox(height: 24),
-//             const Text(
-//               "หรือเข้าสู่ระบบด้วย",
-//               textAlign: TextAlign.center,
-//               style: TextStyle(color: Colors.grey),
-//             ),
-//             const SizedBox(height: 16),
-
-//             // Social Buttons Row
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-//               children: [
-//                 _socialButton(
-//                   label: "Google",
-//                   color: Colors.red,
-//                   icon: Icons.g_mobiledata,
-//                   onPressed: () => _controller.handleGoogleLogin(context),
-//                 ),
-//                 _socialButton(
-//                   label: "Facebook",
-//                   color: Colors.blue.shade900,
-//                   icon: Icons.facebook,
-//                   onPressed: () => _controller.handleFacebookLogin(context),
-//                 ),
-//               ],
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _socialButton({
-//     required String label,
-//     required Color color,
-//     required IconData icon,
-//     required VoidCallback onPressed,
-//   }) {
-//     return ElevatedButton.icon(
-//       onPressed: onPressed,
-//       icon: Icon(icon, color: Colors.white),
-//       label: Text(label),
-//       style: ElevatedButton.styleFrom(
-//         backgroundColor: color,
-//         foregroundColor: Colors.white,
-//         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-//       ),
-//     );
-//   }
-// }
+// lib/auth/login/login_page.dart
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'login_controller.dart';
 import 'widgets/login_header.dart';
 import 'widgets/login_form.dart';
@@ -190,10 +20,58 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+  bool _rememberMe = false;
+
+  static const _kRememberMeKey = 'remember_me';
+  static const _kSavedEmailKey = 'saved_email';
+  static const _kSavedPasswordKey = 'saved_password';
+
   @override
   void initState() {
     super.initState();
     controller = LoginController();
+    _loadRememberedCredentials();
+  }
+
+  /// โหลด email/password ที่บันทึกไว้จาก SharedPreferences
+  Future<void> _loadRememberedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final remembered = prefs.getBool(_kRememberMeKey) ?? false;
+    if (remembered) {
+      final savedEmail = prefs.getString(_kSavedEmailKey) ?? '';
+      final savedPassword = prefs.getString(_kSavedPasswordKey) ?? '';
+      if (mounted) {
+        setState(() {
+          _rememberMe = true;
+          emailController.text = savedEmail;
+          passwordController.text = savedPassword;
+        });
+      }
+    }
+  }
+
+  /// บันทึกหรือลบ credentials ตาม flag
+  Future<void> _saveRememberedCredentials({required bool remember}) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (remember) {
+      await prefs.setBool(_kRememberMeKey, true);
+      await prefs.setString(_kSavedEmailKey, emailController.text.trim());
+      await prefs.setString(_kSavedPasswordKey, passwordController.text.trim());
+    } else {
+      await prefs.setBool(_kRememberMeKey, false);
+      await prefs.remove(_kSavedEmailKey);
+      await prefs.remove(_kSavedPasswordKey);
+    }
+  }
+
+  void _handleLogin() async {
+    await _saveRememberedCredentials(remember: _rememberMe);
+    if (!mounted) return;
+    controller.handleEmailLogin(
+      context,
+      emailController.text.trim(),
+      passwordController.text.trim(),
+    );
   }
 
   @override
@@ -226,20 +104,15 @@ class _LoginPageState extends State<LoginPage> {
                       LoginForm(
                         usernameController: emailController,
                         passwordController: passwordController,
+                        rememberMe: _rememberMe,
+                        onRememberMeChanged: (val) =>
+                            setState(() => _rememberMe = val),
                       ),
 
                       const SizedBox(height: 24),
 
                       /// ===== LOGIN BUTTON =====
-                      LoginButton(
-                        onPressed: () {
-                          controller.handleEmailLogin(
-                            context,
-                            emailController.text.trim(),
-                            passwordController.text.trim(),
-                          );
-                        },
-                      ),
+                      LoginButton(onPressed: _handleLogin),
 
                       const SizedBox(height: 20),
 

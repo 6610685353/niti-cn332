@@ -1,3 +1,9 @@
 node_modules/
 implementation_plan.md
-.*pyc
+*.env
+*/__pycache__/
+*.pyc
+*smart_niti_app/backend/.venv
+firebase-credentials.json
+.DS_Store
+*.zip

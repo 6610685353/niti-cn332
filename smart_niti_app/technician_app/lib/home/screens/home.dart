@@ -1,61 +1,206 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants/app_color.dart';
+import '../../core/services/ticket_service.dart';
+import '../../core/services/user_service.dart';
+import '../../profile/models/user_model.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/task_card.dart';
-import '../models/task_model.dart';
+import '../../work_order/models/work.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final VoidCallback onProfileTap;
 
-  const HomeScreen({Key? key, required this.onProfileTap}) : super(key: key);
+  const HomeScreen({super.key, required this.onProfileTap});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<WorkOrder> _activeTickets = [];
+  UserModel? _user;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    FirebaseAuth.instance.currentUser?.getIdToken(true).then((token) {
+      debugPrint("TOKEN: $token");
+    });
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final results = await Future.wait([
+        TicketService.getActiveTickets(),
+        UserService.getMyProfile(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _activeTickets = results[0] as List<WorkOrder>;
+        _user = results[1] as UserModel;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: AppColors.bgApp,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: AppColors.bgApp,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(_error!, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // งานที่ยังไม่ได้ Accept (assigned → Pending, isAccepted: false)
+    final pendingAccept = _activeTickets
+        .where((o) => !(o.isAccepted ?? false))
+        .toList();
+    // งานที่ Accept แล้ว (in_progress → Repairing, isAccepted: true)
+    final acceptedTasks = _activeTickets
+        .where((o) => o.isAccepted ?? false)
+        .toList();
+
     return Scaffold(
       backgroundColor: AppColors.bgApp,
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 25),
-              _buildWorkSummary(),
-              const SizedBox(height: 30),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'My Tasks',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
+        child: RefreshIndicator(
+          onRefresh: _loadData,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 25),
+                _buildWorkSummary(),
+                const SizedBox(height: 30),
+
+                // ── งานที่ต้อง Accept ──────────────────────────────────
+                if (pendingAccept.isNotEmpty) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'New Assignments',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      _buildChip(
+                        '${pendingAccept.length} pending',
+                        const Color(0xFFFFF3E0),
+                        const Color(0xFFFED7AA),
+                        const Color(0xFFEA580C),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Column(
+                    children: pendingAccept
+                        .map(
+                          (order) =>
+                              TaskCard(workOrder: order, onRefresh: _loadData),
+                        )
+                        .toList(),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // ── งานที่กำลังดำเนินการ ───────────────────────────────
+                if (acceptedTasks.isNotEmpty) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'My Tasks',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      _buildChip(
+                        'Today',
+                        const Color(0xFFEBF5FF),
+                        const Color(0xFFBFDBFE),
+                        const Color(0xFF1D4ED8),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Column(
+                    children: acceptedTasks
+                        .map(
+                          (order) =>
+                              TaskCard(workOrder: order, onRefresh: _loadData),
+                        )
+                        .toList(),
+                  ),
+                ],
+
+                // ── ไม่มีงาน ────────────────────────────────────────────
+                if (_activeTickets.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 60),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline_rounded,
+                            size: 64,
+                            color: Colors.grey.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No active tasks today',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade400,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  _buildTodayChip(),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Column(
-                children: homeMockTasks
-                    .map(
-                      (task) => TaskCard(
-                        id: task.id,
-                        title: task.title,
-                        tag: task.tag,
-                        time: task.time,
-                        location: task.location,
-                        tagColor: task.tagColor,
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -63,14 +208,18 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildHeader() {
+    final displayName =
+        _user?.fullName ??
+        FirebaseAuth.instance.currentUser?.email ??
+        'Technician';
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
-            // กดรูปโปรไฟล์
             GestureDetector(
-              onTap: onProfileTap,
+              onTap: widget.onProfileTap,
               child: Container(
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
@@ -80,43 +229,49 @@ class HomeScreen extends StatelessWidget {
                     width: 1.5,
                   ),
                 ),
-                child: const CircleAvatar(
+                child: CircleAvatar(
                   radius: 24,
-                  backgroundColor: Color(0xFFF8FAFC),
-                  child: Icon(
-                    Icons.person_rounded,
-                    color: Color(0xFF475569),
-                    size: 26,
-                  ),
+                  backgroundColor: const Color(0xFFF8FAFC),
+                  backgroundImage:
+                      (_user?.imageUrl != null && _user!.imageUrl!.isNotEmpty)
+                      ? NetworkImage(_user!.imageUrl!)
+                      : null,
+                  child: (_user?.imageUrl == null || _user!.imageUrl!.isEmpty)
+                      ? const Icon(
+                          Icons.person_rounded,
+                          color: Color(0xFF475569),
+                          size: 26,
+                        )
+                      : null,
                 ),
               ),
             ),
             const SizedBox(width: 12),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
                     Text(
-                      'Technician SNT',
-                      style: TextStyle(
+                      displayName,
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textDark,
                         letterSpacing: -0.3,
                       ),
                     ),
-                    SizedBox(width: 4),
-                    Icon(
+                    const SizedBox(width: 4),
+                    const Icon(
                       Icons.verified_rounded,
                       size: 16,
                       color: Color(0xFF0EA5E9),
                     ),
                   ],
                 ),
-                Text(
-                  'Technician Specialist',
+                const Text(
+                  'Technician',
                   style: TextStyle(
                     color: AppColors.textLight,
                     fontSize: 13,
@@ -127,64 +282,19 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
-        _buildNotificationBadge(),
       ],
     );
   }
 
-  Widget _buildNotificationBadge() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => print("Noti Pressed"),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            height: 44,
-            width: 44,
-            alignment: Alignment.center,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(
-                  Icons.notifications_none_rounded,
-                  size: 24,
-                  color: Color(0xFF475569),
-                ),
-                Positioned(
-                  top: -2,
-                  right: -2,
-                  child: Container(
-                    height: 9,
-                    width: 9,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildWorkSummary() {
+    final assignedCount = _activeTickets.length;
+    final pendingCount = _activeTickets
+        .where((t) => !(t.isAccepted ?? false))
+        .length;
+    final repairingCount = _activeTickets
+        .where((t) => t.isAccepted ?? false)
+        .length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -201,23 +311,23 @@ class HomeScreen extends StatelessWidget {
         Row(
           children: [
             SummaryCard(
-              count: '08',
+              count: '$assignedCount',
               label: 'Assigned',
               icon: Icons.assignment_rounded,
               baseColor: const Color(0xFFF43F5E),
             ),
             const SizedBox(width: 12),
             SummaryCard(
-              count: '03',
+              count: '$pendingCount',
               label: 'Pending',
               icon: Icons.hourglass_top_rounded,
               baseColor: const Color(0xFFF59E0B),
             ),
             const SizedBox(width: 12),
             SummaryCard(
-              count: '05',
-              label: 'Resolved',
-              icon: Icons.check_circle_rounded,
+              count: '$repairingCount',
+              label: 'In Progress',
+              icon: Icons.build_rounded,
               baseColor: const Color(0xFF10B981),
             ),
           ],
@@ -226,28 +336,26 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTodayChip() {
+  Widget _buildChip(
+    String label,
+    Color bgColor,
+    Color borderColor,
+    Color textColor,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFEBF5FF),
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFBFDBFE)),
+        border: Border.all(color: borderColor),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.circle, size: 6, color: Color(0xFF3B82F6)),
-          const SizedBox(width: 6),
-          const Text(
-            'Today',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1D4ED8),
-            ),
-          ),
-        ],
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: textColor,
+        ),
       ),
     );
   }

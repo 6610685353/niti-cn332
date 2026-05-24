@@ -53,20 +53,6 @@ class MainBottomNav extends StatelessWidget {
           BottomNavigationBarItem(
             icon: Padding(
               padding: EdgeInsets.only(top: 10),
-              child: Icon(Icons.calendar_today),
-            ),
-            label: 'Booking',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(top: 10),
-              child: Icon(Icons.inventory),
-            ),
-            label: 'Parcel',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(top: 10),
               child: Icon(Icons.person),
             ),
             label: 'Profile',
