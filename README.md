@@ -157,6 +157,11 @@ flutter run -d chrome
 
 ---
 
+## Design Documents
+
+- [Smart Niti Design Document](./smart_niti_design_document.pdf)
+
+---
 
 ## Figma Design
 
