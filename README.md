@@ -89,6 +89,8 @@ Iteration 6: [Smart Niti Iteration 6 (Facade & Adapter Pattern)](https://www.can
 
 Iteration 7: [Smart Niti Iteration 7 (Implement Plan)](https://www.canva.com/design/DAHDFrfeymw/zgIoPW6FiC3qV7l1JkCUzA/view?utm_content=DAHDFrfeymw&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h3529507806)
 
+Iteration 8: [Smart Niti Iteration 8 (Final Iteration)](https://canva.link/i74fbv76wpma8j8)
+
 ---
 
 ## Live Demo Videos
@@ -134,5 +136,8 @@ Iteration 7: [Smart Niti Iteration 7 (Implement Plan)](https://www.canva.com/des
   - Smart Niti Iteration 5 (Mapping & Facade)
   - Smart Niti Iteration 6 (Facade & Adapter Pattern)
   - Smart Niti Iteration 7 (Implement Plan)
+ 
+- **18 พฤกษภาคม 2569**
+  - Smart Niti Iteration 8 (Final Iteration)
 
 
