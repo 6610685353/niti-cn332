@@ -7,8 +7,14 @@ from api.endpoints import tickets, users
 from models import ticket, user
 from database import engine, Base
 from firebase_admin import credentials
+import os
+import json
 
-cred = credentials.Certificate("firebase-credentials.json")
+firebase_cred_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
+if firebase_cred_json:
+    cred = credentials.Certificate(json.loads(firebase_cred_json))
+else:
+    cred = credentials.Certificate("firebase-credentials.json")  # local fallback
 
 firebase_admin.initialize_app(cred)
 
