@@ -16,7 +16,7 @@ class Ticket {
         this.image = null;
         console.log(`   [Domain:Ticket] Created #${id}: ${type} @ ${location}`);
     }
-    
+
     assign(techId) { this.technicianId = techId; this.status = "Assigned"; }
     accept() { this.status = "Accepted"; }
     updateStatus(newStatus) { this.status = newStatus; }
@@ -31,7 +31,7 @@ class Parcel {
         this.qrImage = null;
         console.log(`   [Domain:Parcel] New parcel from ${carrier} for ${roomNumber}`);
     }
-    
+
     generateQR() {
         this.qrImage = `QR-${this.barcodeID}`;
         return this.qrImage;
@@ -52,10 +52,10 @@ class Booking {
 
 class MeetingRoom {
     constructor(name) { this.name = name; this.status = "Available"; }
-    
+
     reserve(userId, dateTime, addOns) {
         if (this.status === "Available") {
-            return new Booking("BK-"+Date.now(), userId, this.name, dateTime, addOns);
+            return new Booking("BK-" + Date.now(), userId, this.name, dateTime, addOns);
         }
         return null;
     }
@@ -109,7 +109,7 @@ class ResidentFacade {
     submitRepairRequest(type, details, location, timeSlot) {
         console.log(`\n--- 🏠 Resident: Submit Repair ---`);
         // 1. Create Domain Object
-        const ticket = new Ticket("TK-"+Date.now(), this.userId, type, details, location, timeSlot);
+        const ticket = new Ticket("TK-" + Date.now(), this.userId, type, details, location, timeSlot);
         // 2. Notify Juristic
         notifService.pushMessage("JuristicAdmin", `New Repair Request: ${ticket.id}`);
         return ticket.id;
@@ -122,14 +122,14 @@ class ResidentFacade {
         console.log(`\n--- 🏠 Resident: Pay Bills ---`);
         const amount = 1500; // Mock amount
         let txnId;
-        
+
         // 1. Process Payment
         if (paymentMethod === "CreditCard") txnId = paymentSys.processCreditCard(amount);
         else txnId = paymentSys.generateQR(amount);
-        
+
         // 2. Generate Receipt
         paymentSys.generateReceipt(txnId);
-        
+
         // 3. Notify User
         notifService.pushMessage(this.userId, `Payment Successful! Ref: ${txnId}`);
         return { success: true, txn: txnId };
@@ -142,7 +142,7 @@ class ResidentFacade {
     getParcelPickupCode(parcelId) {
         console.log(`\n--- 🏠 Resident: Get Parcel QR ---`);
         // In real app, we fetch Parcel object from DB
-        const parcel = new Parcel(parcelId, "A-502", "Kerry"); 
+        const parcel = new Parcel(parcelId, "A-502", "Kerry");
         return parcel.generateQR();
     }
     getParcelHistory() { return [{ id: "P-1", courier: "Kerry", date: "2026-02-01" }]; }
@@ -174,7 +174,7 @@ class JuristicFacade {
 
     // --- Task Dispatch ---
     getTicketDetail(ticketId) { return { id: ticketId, issue: "Water Leak", priority: "High" }; }
-    
+
     assignTaskToTechnician(ticketId, techId) {
         console.log(`\n--- 👮‍♂️ Juristic: Assign Task ---`);
         // In real app: Find ticket -> ticket.assign(techId)
@@ -191,7 +191,7 @@ class JuristicFacade {
     // --- Parcel Management ---
     registerIncomingParcel(residentId, carrier) {
         console.log(`\n--- 👮‍♂️ Juristic: Register Parcel ---`);
-        const newParcel = new Parcel("P-"+Date.now(), "UnknownRoom", carrier);
+        const newParcel = new Parcel("P-" + Date.now(), "UnknownRoom", carrier);
         const qr = newParcel.generateQR();
         notifService.pushMessage(residentId, `Parcel Arrived from ${carrier}! Use QR to pickup.`);
         return newParcel.barcodeID;
@@ -213,7 +213,7 @@ class TechnicianFacade {
         console.log(`   [DB] Ticket ${ticketId} status -> Accepted`);
         notifService.pushMessage("Juristic", `Technician ${this.techId} accepted job ${ticketId}`);
     }
-    
+
     rejectJob(ticketId, reason) {
         console.log(`\n--- 👷 Technician: Reject Job ---`);
         console.log(`   [DB] Ticket ${ticketId} rejected. Reason: ${reason}`);
