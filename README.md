@@ -74,9 +74,9 @@
 
 ## Deployed Applications
 
-- [Resident (ลูกบ้าน) – Web Application](https://your-resident-app.vercel.app)
+- [Resident (ลูกบ้าน) – Mobile Application](https://your-resident-app.vercel.app)
 
-- [Technician (ช่าง) – Web Application](https://your-technician-app.vercel.app)
+- [Technician (ช่าง) – Mobile Application](https://your-technician-app.vercel.app)
 
 - [Juristic (นิติบุคคล) – Web Application](https://smart-niti-juristic.vercel.app)
 
