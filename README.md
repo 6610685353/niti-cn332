@@ -1,67 +1,125 @@
-# Smart Niti Web Application (CN332)
+# Smartniti Management System
 
+> แพลตฟอร์มบริหารจัดการที่อยู่อาศัย มุ่งเน้นระบบแจ้งซ่อมและการจัดการงานบำรุงรักษาแบบครบวงจร
 
+---
+## Members
 
-## 1. Overview (บทนำและที่มา)
+1. Thanawan Phongphaew (6610685171)  
+2. Netchanok Yindee (6610685221)  
+3. Punnawat Namkum (6610685247)  
+4. Siranat Phimphicharn (6610685353)  
+5. Ultimata Sangrungruang (6610685387)
+---
 
-### 1.1 Pain Points (ปัญหาที่พบ)
+## Tech Stack
 
-ในปัจจุบัน การบริหารจัดการหมู่บ้านจัดสรรและคอนโดมิเนียมยังคงประสบกับปัญหาหลายประการ อันเนื่องมาจากกระบวนการทำงานที่ล่าช้าและขาดความโปร่งใส โดยปัญหาที่พบบ่อยประกอบด้วย
+### Frontend
+![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/dart-%230175C2.svg?style=for-the-badge&logo=dart&logoColor=white)
 
-- การแจ้งซ่อมแซมยังต้องอาศัยการกรอกเอกสารหรือแจ้งผ่านหลายช่องทาง ทำให้เกิดความล่าช้า
-- ลูกบ้านไม่สามารถติดตามสถานะของงานซ่อมได้อย่างชัดเจน
-- การจองพื้นที่ส่วนกลางมีความยุ่งยากและขาดระบบจัดการที่เป็นมาตรฐาน
-- ลูกบ้านลืมชำระค่าส่วนกลาง ส่งผลให้ถูกระงับสิทธิ์การใช้งานโดยไม่รู้ตัว
-- การสื่อสารระหว่างนิติบุคคลและลูกบ้านไม่ทั่วถึง เช่น ข่าวสารหรือประกาศสำคัญไม่ถูกส่งถึงทุกคน
+### Backend
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 
-ปัญหาเหล่านี้ส่งผลให้ลูกบ้านเกิดความไม่พึงพอใจ และในระยะยาวอาจลดทอนคุณค่าและภาพลักษณ์ของโครงการที่อยู่อาศัย
+### Database & Infrastructure
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
+![Firebase](https://img.shields.io/badge/firebase-%23039BE5.svg?style=for-the-badge&logo=firebase)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![DigitalOcean](https://img.shields.io/badge/DigitalOcean-0080FF?style=for-the-badge&logo=digitalocean&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
 
 ---
 
-### 1.2 Solution (แนวทางแก้ไข)
+## ภาพรวม
+
+**Smartniti Management System** พัฒนาขึ้นเพื่อยกระดับ **ระบบแจ้งซ่อมและการจัดการงานบำรุงรักษา (e-Repair & Task Dispatch)** โดยนำแนวคิดของ **Traffy Fondue** มาประยุกต์ใช้ เพื่อเพิ่มความสะดวก รวดเร็ว และโปร่งใสในการดำเนินงาน
+
+### ปัญหาที่พบ
+
+- การแจ้งซ่อมต้องอาศัยเอกสารหรือหลายช่องทาง ทำให้เกิดความล่าช้าและข้อมูลตกหล่น
+- ลูกบ้านไม่สามารถติดตามสถานะงานซ่อมได้ว่าถึงขั้นตอนใดหรือช่างคนใดรับผิดชอบ
+- นิติบุคคลขาดระบบกลางในการประเมิน Workload และแจกจ่ายงานให้ช่างอย่างมีประสิทธิภาพ
+- การสื่อสารระหว่างลูกบ้าน ช่าง และนิติบุคคลไม่เชื่อมโยงกัน
+
+### แนวทางแก้ไข
 
 โครงงานนี้มีวัตถุประสงค์เพื่อพัฒนาระบบ **Smart Niti** ซึ่งเป็นแพลตฟอร์มบริหารจัดการที่อยู่อาศัยแบบครบวงจร โดยนำแนวคิดของระบบ **Traffy Fondue** มาประยุกต์ใช้ในกระบวนการแจ้งซ่อม เพื่อเพิ่มความสะดวก รวดเร็ว และสามารถตรวจสอบสถานะได้อย่างโปร่งใส พร้อมผสานแนวทางการดำเนินงานของธุรกิจด้านการบริหารจัดการอสังหาริมทรัพย์ เช่น Smart Service และ LPN
 
-ระบบ Smart Niti มุ่งเน้นการทำงานในลักษณะ **Proactive** โดยสามารถแจ้งเตือนลูกบ้านและนิติบุคคลก่อนเกิดปัญหา เช่น การแจ้งเตือนการชำระค่าส่วนกลาง หรือการบำรุงรักษาเชิงป้องกัน อีกทั้งยังให้ความสำคัญกับความโปร่งใสในการดำเนินงาน ผ่านการแสดงสถานะงานและประวัติการดำเนินการอย่างชัดเจน
-
 นอกจากนี้ ระบบถูกออกแบบโดยใช้สถาปัตยกรรมซอฟต์แวร์ที่มีความยืดหยุ่น สามารถรองรับการขยายตัวและการพัฒนาเพิ่มเติมในอนาคต เพื่อให้สอดคล้องกับการเติบโตของโครงการที่อยู่อาศัยและความต้องการของผู้ใช้งาน
 
----
-
-## 2. Features (ฟังก์ชันการทำงาน)
-
-### 2.1 ส่วนลูกบ้าน  
-*(Resident Mobile App / LINE OA)*
-
-- **e-Repair**  
-  แจ้งซ่อมพร้อมระบุตำแหน่งและแนบรูปภาพ สามารถติดตามสถานะการดำเนินงานได้แบบ Real-time
-
-- **e-Payment**  
-  ชำระค่าส่วนกลางและค่าน้ำผ่าน QR Payment หรือ Credit Card รองรับการตัดยอดอัตโนมัติ
-
-- **Smart Parcel**  
-  ระบบแจ้งเตือนเมื่อมีพัสดุเข้ามาถึงโครงการ
-
-- **Reservation**  
-  ระบบจองพื้นที่ส่วนกลาง เช่น ห้องประชุม ฟิตเนส หรือพื้นที่ส่วนรวมอื่น ๆ
 
 ---
 
-### 2.2 ส่วนนิติบุคคลและช่าง  
-*(Admin Web Portal & Staff App)*
+## Feature
 
-- **Dashboard**  
-  แสดงสรุปภาพรวมของงานซ่อม รายรับ-รายจ่าย และเรื่องร้องเรียนประจำวัน
+### ลูกบ้าน — Resident Mobile App
 
-- **Task Assignment**  
-  ระบบมอบหมายงานให้ช่างและเจ้าหน้าที่รักษาความปลอดภัย
+| ฟีเจอร์ | รายละเอียด |
+|---------|-----------|
+| **e-Repair** | แจ้งซ่อม ระบุตำแหน่ง และแนบรูปภาพประกอบได้อย่างรวดเร็ว |
+| **Real-time Tracking** | ติดตามสถานะการดำเนินงานแบบ Real-time |
+| **Review & Feedback** | ให้คะแนนความพึงพอใจเมื่อการซ่อมแซมเสร็จสิ้น |
 
-- **Asset Management**  
-  ระบบจัดการทะเบียนทรัพย์สินส่วนกลาง พร้อมตารางการบำรุงรักษา
+### นิติบุคคลและช่าง — Admin Web Portal & Technician App
 
-- **Announcements**  
-  ระบบประกาศข่าวสารที่สามารถเลือกกลุ่มเป้าหมายได้  
-  (เช่น ประกาศเฉพาะลูกบ้านอาคาร A)
+| ฟีเจอร์ | รายละเอียด |
+|---------|-----------|
+| **Dashboard** | สรุปภาพรวมงานซ่อมทั้งหมด แบ่งตามสถานะและหมวดหมู่ |
+| **Task Assignment & Dispatch** | มองเห็น Workload ของช่างแต่ละคน และ Assign/Unassign งานได้อย่างมีประสิทธิภาพ |
+| **Technician Task Management** | กดรับงาน อัปเดตสถานะ และดูรายละเอียดพร้อมรูปภาพได้ทันที |
+
+---
+
+## Deployed Applications
+
+- [Resident (ลูกบ้าน) – Web Application](https://your-resident-app.vercel.app)
+
+- [Technician (ช่าง) – Web Application](https://your-technician-app.vercel.app)
+
+- [Juristic (นิติบุคคล) – Web Application](https://smart-niti-juristic.vercel.app)
+
+---
+
+## วิธีรันโปรเจกต์
+
+> เปิด Terminal แยกตามโฟลเดอร์ของแต่ละแอปพลิเคชัน
+
+### Backend API (FastAPI)
+
+```bash
+cd smart_niti_app/
+docker-compose up -d --build
+```
+
+ระบบจะทำงานที่ `http://localhost:8000`
+สามารถดู API Document ได้ที่ `http://localhost:8000/docs`
+
+### Resident App (ลูกบ้าน)
+
+```bash
+cd smart_niti_app/mobile_app
+flutter pub get
+flutter run
+```
+
+### Technician App (ช่าง)
+
+```bash
+cd smart_niti_app/technician_app
+flutter pub get
+flutter run
+```
+
+### Juristic Web App (นิติบุคคล)
+
+```bash
+cd smart_niti_app/juristic_app
+flutter pub get
+flutter run -d chrome
+```
+
 
 ---
 
@@ -70,6 +128,17 @@
 - [Juristics (นิติบุคคล) – GUI Design](https://www.figma.com/proto/gkOWhsQL69FxR5yKzM1Lew/Smart-Niti?node-id=216-38&t=VBFV1Pgk1Pzm8ASV-1&starting-point-node-id=216%3A38)
 - [Resident (ลูกบ้าน) – GUI Design](https://www.figma.com/proto/gkOWhsQL69FxR5yKzM1Lew/Smart-Niti?node-id=18-273&t=VBFV1Pgk1Pzm8ASV-1&starting-point-node-id=18%3A273)
 - [Technician (ช่าง) – GUI Design](https://www.figma.com/proto/gkOWhsQL69FxR5yKzM1Lew/Smart-Niti?node-id=215-1131&t=VBFV1Pgk1Pzm8ASV-1&starting-point-node-id=215%3A1131)
+
+---
+
+## Live Demo Videos
+
+- [Resident (ลูกบ้าน) – Video Presentation](https://drive.google.com/drive/folders/1z7impwBif7HZRWsYC_VMSHCZ1VWik6bP)
+
+- [Technician (ช่าง) – Video Presentation](https://drive.google.com/file/d/1Nnr4fpn-csTD8xransCy42NKI4lnaGGQ/view?usp=drive_link)
+
+- [Juristic (นิติบุคคล) – Video Presentation](https://drive.google.com/file/d/10gJiyqQ8gKgFf8Giu7AiGaH-sEo27X4V/view?usp=sharing)
+
 
 ---
 
@@ -93,37 +162,6 @@ Iteration 8: [Smart Niti Iteration 8 (Final Iteration)](https://canva.link/i74fb
 
 ---
 
-## Live Demo Videos
-
-- [Resident (ลูกบ้าน) – Video Presentation](https://drive.google.com/drive/folders/1z7impwBif7HZRWsYC_VMSHCZ1VWik6bP)
-
-- [Technician (ช่าง) – Video Presentation](https://drive.google.com/file/d/1Nnr4fpn-csTD8xransCy42NKI4lnaGGQ/view?usp=drive_link)
-
-- [Juristic (นิติบุคคล) – Video Presentation](https://drive.google.com/file/d/10gJiyqQ8gKgFf8Giu7AiGaH-sEo27X4V/view?usp=sharing)
-
----
-
-## Deployed Applications
-
-- [Resident (ลูกบ้าน) – Web Application](https://your-resident-app.vercel.app)
-
-- [Technician (ช่าง) – Web Application](https://your-technician-app.vercel.app)
-
-- [Juristic (นิติบุคคล) – Web Application](https://smart-niti-juristic.vercel.app)
-
----
-
-## Members
-
-1. Thanawan Phongphaew (6610685171)  
-2. Netchanok Yindee (6610685221)  
-3. Punnawat Namkum (6610685247)  
-4. Siranat Phimphicharn (6610685353)  
-5. Ultimata Sangrungruang (6610685387)
-
----
-
-
 ## ประวัติการนำเสนอ
 
 - **12 มกราคม 2569**  
@@ -139,5 +177,4 @@ Iteration 8: [Smart Niti Iteration 8 (Final Iteration)](https://canva.link/i74fb
  
 - **18 พฤกษภาคม 2569**
   - Smart Niti Iteration 8 (Final Iteration)
-
-
+---
