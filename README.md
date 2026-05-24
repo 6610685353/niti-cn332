@@ -72,11 +72,11 @@
 
 ---
 
-## Deployed Applications
+## Live Demo - Deployed Applications
 
 - [Resident (ลูกบ้าน) – Mobile Application](https://drive.google.com/drive/folders/1gCy_l9M6CrjtTDi-aH-xx4O68yYETA74?usp=sharing)
 
-- [Technician (ช่าง) – Mobile Application](https://your-technician-app.vercel.app)
+- [Technician (ช่าง) – Mobile Application]([https://your-technician-app.vercel.app](https://drive.google.com/file/d/1Zk_2lLzXmLjPAoDFe5AysG0aQVdXniUg/view?usp=drive_link))
 
 - [Juristic (นิติบุคคล) – Web Application](https://smart-niti-juristic.vercel.app)
 
@@ -166,7 +166,7 @@ flutter run -d chrome
 
 ---
 
-## Live Demo Videos
+## Demo Videos
 
 - [Resident (ลูกบ้าน) – Video Presentation](https://drive.google.com/drive/folders/1z7impwBif7HZRWsYC_VMSHCZ1VWik6bP)
 
