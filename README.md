@@ -80,6 +80,8 @@
 
 - [Juristic (นิติบุคคล) – Web Application](https://smart-niti-juristic.vercel.app)
 
+- [Backend API - API Documentation](https://smart-niti-backend-3d8k8.ondigitalocean.app/docs)
+
 ---
 
 ## วิธีรันโปรเจกต์
