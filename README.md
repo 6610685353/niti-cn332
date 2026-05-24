@@ -62,7 +62,7 @@
 | **Real-time Tracking** | ติดตามสถานะการดำเนินงานแบบ Real-time |
 | **Review & Feedback** | ให้คะแนนความพึงพอใจเมื่อการซ่อมแซมเสร็จสิ้น |
 
-### นิติบุคคลและช่าง — Admin Web Portal & Technician App
+### นิติบุคคลและช่าง — Juristic Web App & Technician Mobile App
 
 | ฟีเจอร์ | รายละเอียด |
 |---------|-----------|
