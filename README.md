@@ -1,4 +1,4 @@
-# Smartniti Management System
+# Smart Niti Management System
 
 > แพลตฟอร์มบริหารจัดการที่อยู่อาศัย มุ่งเน้นระบบแจ้งซ่อมและการจัดการงานบำรุงรักษาแบบครบวงจร
 
