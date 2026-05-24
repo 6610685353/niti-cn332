@@ -18,11 +18,7 @@ else:
 
 firebase_admin.initialize_app(cred)
 
-app = FastAPI(
-    docs_url=None,
-    redoc_url=None,
-    openapi_url=None,
-)
+app = FastAPI()
 
 origins = [
     "http://localhost",
