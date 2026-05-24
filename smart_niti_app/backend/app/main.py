@@ -18,7 +18,11 @@ else:
 
 firebase_admin.initialize_app(cred)
 
-app = FastAPI()
+app = FastAPI(
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 origins = [
     "http://localhost",
@@ -47,6 +51,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(tickets.router)
 app.include_router(users.router)
 
-@app.get("/")
+@app.get("/health")
 def health_check():
     return {"status": "online"}
