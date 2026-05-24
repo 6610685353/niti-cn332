@@ -86,6 +86,10 @@
 
 > เปิด Terminal แยกตามโฟลเดอร์ของแต่ละแอปพลิเคชัน
 
+```bash
+git clone https://github.com/6610685353/niti-cn332.git
+```
+
 ### Backend API (FastAPI)
 
 ```bash
