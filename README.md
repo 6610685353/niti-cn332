@@ -84,6 +84,34 @@
 
 ---
 
+## Test Accounts
+
+> บัญชีสำหรับทดสอบการใช้งานระบบ Smartniti Management System
+
+### Resident (ลูกบ้าน)
+
+| Email | Password | Role |
+|------|----------|------|
+| resident.test.322@gmail.com | `password` | Resident |
+
+---
+
+### Technician (ช่าง)
+
+| Email | Password | Role |
+|------|----------|------|
+| technician1@gmail.com | `technician` | Technician |
+
+---
+
+### Juristic (นิติบุคคล)
+
+| Email | Password | Role |
+|------|----------|------|
+| smartniti1234@gmail.com | `test1234` | Juristic Admin |
+
+---
+
 ## วิธีรันโปรเจกต์
 
 > เปิด Terminal แยกตามโฟลเดอร์ของแต่ละแอปพลิเคชัน
@@ -128,6 +156,7 @@ flutter run -d chrome
 
 
 ---
+
 
 ## Figma Design
 
